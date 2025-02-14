@@ -123,6 +123,9 @@ Version		    Notes
                 Implementation of working gap adjustment in the X direction after toolpath deformation
                 Implementation of working automatic pore size adjustment on concave and convex curved surfaces
                 Cleaned-up the modules folder and polished the MTG modules comments / headers
+                
+5.7 
+2025-02-14      Added 2 new Multinozzle configurations
 
 -------------------------------------------------------------------------------------------------------------------------
 """
@@ -159,8 +162,12 @@ scriptname = os.path.basename(__file__)
 FANUC_TRAVEL_CLEARANCE = 100
 
 # Multinozzle configuration
-MLTNZL_CONFIG_MEK_SN123 = {'name':'MEK SN 01-03','nb':26, 'd':0.250, 's':1.000}
-MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123]
+MLTNZL_CONFIG_MEK_SN123 = {'name': 'MEK SN 01-03',
+                           'nb': 26, 'd': 0.250, 's': 1.000}
+MLTNZL_CONFIG_750_GMN = {'name': '750 GMN', 'nb': 36, 'd': 0.250, 's': 1.000}
+MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.434}
+MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123,
+                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN]
 MLTNZL_CONFIG_LIST = [i['name'] for i in MLTNZL_CONFIGS]
 MLTNZL_CONFIG_LIST.append(0)
 MLTNZL_CONFIG = ''
@@ -169,105 +176,182 @@ MLTNZL_CONFIG = ''
 RESERVOIR_48 = '48 cm³'                 # 48 cm³ reservoir type
 RESERVOIR_250 = '250 cm³'               # 250 cm³ reservoir type
 RESERVOIR_TYPE = ''                     # choosen reservoir type from the list
-RESERVOIR_LIST = [RESERVOIR_48, RESERVOIR_250, 0]   # list of reservoir type to display in the input window
-AVAILABLE_VOLUME_48 = 52.93022 - 5.07999     # cm³, available 48 cm³ ink cartridge volume as per MEK's drawings (= vol piston end - vol piston start)
-AVAILABLE_VOLUME_250 = 250              # cm³, available 250 cm³ ink cartridge volume (= vol piston end - vol piston start)
-AVAILABLE_VOLUME = 0                    # The actual volume variable used in the calculations
+# list of reservoir type to display in the input window
+RESERVOIR_LIST = [RESERVOIR_48, RESERVOIR_250, 0]
+# cm³, available 48 cm³ ink cartridge volume as per MEK's drawings (= vol piston end - vol piston start)
+AVAILABLE_VOLUME_48 = 52.93022 - 5.07999
+# cm³, available 250 cm³ ink cartridge volume (= vol piston end - vol piston start)
+AVAILABLE_VOLUME_250 = 250
+# The actual volume variable used in the calculations
+AVAILABLE_VOLUME = 0
 
 # Material parameters
 #   rho: g/cm³, w: wt%, f: vol%, n: -, K: Pa.s^n, eta_inf: Pa.s, eta_0: Pa.s, tau_0: Pa, lambda: s, a: -
-white_color = (210/255,210/255,210/255)
-red_color = (200/255,0,0)
-drak_grey_color = (60/255,60/255,60/255)
-MAT_INK6040 = {'name':'Ink 60/40', 'rho':0.905, 'color':white_color, 'w':0, 'f':0, 'n':0.467858145410312, 'k':603.94862937638, 'eta_inf':0, 'eta_0':0, 'tau_0':0, 'lambda':0, 'a':0}
-MAT_ABRA012C = {'name':'Abra 0:12C', 'rho':1.272, 'color':drak_grey_color, 'w':12, 'f':24, 'n':0.5392, 'k':1351.06, 'eta_inf':0, 'eta_0':0, 'tau_0':0, 'lambda':0, 'a':0}
-MAT_EPON014 = {'name':'EPON 0:14', 'rho':1.2137, 'color':red_color, 'w':0, 'f':0, 'n':0.618, 'k':582.45, 'eta_inf':0, 'eta_0':0, 'tau_0':0, 'lambda':0, 'a':0}
-MATERIALS = [MAT_INK6040, MAT_ABRA012C, MAT_EPON014] #MAT_ABRA510, MAT_ABRA108, MAT_ABRABENCH, MAT_EPON014, MAT_EPON512, MAT_EPON1010]
+white_color = (210/255, 210/255, 210/255)
+red_color = (200/255, 0, 0)
+drak_grey_color = (60/255, 60/255, 60/255)
+MAT_INK6040 = {'name': 'Ink 60/40', 'rho': 0.905, 'color': white_color, 'w': 0, 'f': 0,
+               'n': 0.467858145410312, 'k': 603.94862937638, 'eta_inf': 0, 'eta_0': 0, 'tau_0': 0, 'lambda': 0, 'a': 0}
+MAT_ABRA012C = {'name': 'Abra 0:12C', 'rho': 1.272, 'color': drak_grey_color, 'w': 12, 'f': 24,
+                'n': 0.5392, 'k': 1351.06, 'eta_inf': 0, 'eta_0': 0, 'tau_0': 0, 'lambda': 0, 'a': 0}
+MAT_EPON014 = {'name': 'EPON 0:14', 'rho': 1.2137, 'color': red_color, 'w': 0, 'f': 0,
+               'n': 0.618, 'k': 582.45, 'eta_inf': 0, 'eta_0': 0, 'tau_0': 0, 'lambda': 0, 'a': 0}
+# MAT_ABRA510, MAT_ABRA108, MAT_ABRABENCH, MAT_EPON014, MAT_EPON512, MAT_EPON1010]
+MATERIALS = [MAT_INK6040, MAT_ABRA012C, MAT_EPON014]
 MATERIALS_LIST = [i['name'] for i in MATERIALS]
 MATERIALS_LIST.append(0)
 MATERIAL_CHOICE = ''
-TX = 1.20                              # empirical tax multiplier to account for over-extrusion (start, wall creation, end)
+# empirical tax multiplier to account for over-extrusion (start, wall creation, end)
+TX = 1.20
 
 # MTG parameters / user input
-travel_speed = 100                      # mm/s, default max travel speed for the Fanuc movements
-scaff_speed = 50                        # mm/s, default max target printing speed for the Fanuc movements
-rot_speed = 50                          # mm/s, default max target printing speed for Fanuc rotations
-reg_travel_speed = 'R[20]'              # TO-DO : use or delete. default registry for travel speed for the Fanuc movements
-reg_scaff_speed = 'R[21]'               # TO-DO : use or delete. default registry for printing speed for the Fanuc movements
-reg_rot_speed = 'R[25]'               # TO-DO : use or delete. default registry for printing speed for the Fanuc rotations
-scaff_extr_speed = ['0-1 VDC','1-2 VDC','2-3 VDC','3-4 VDC','4-5 VDC','5-6 VDC','6-7 VDC','7-8 VDC','8-9 VDC','9-10 VDC',4]  # voltage, list of available values for scaffold printing speed. See multinozzle controler.
-pressure_buildup_time = 5.0            # s, time in seconds to wait for the pressure to build up before starting the print
-pressure_buildup_z = 7.0                # mm, adds a Z offset when building up the pressure to avoir accumulating material on the printhead
-pressure_retract_time = 1.0             # s, time in seconds to wait for the pressure to relief in the reservoir before no more material should be extruded
-pressure_post_retract_time = 2.0*1000        # TO-DO : include in input window. s, wait time after changing layer before starting next extrusion
-coast_at_end = scaff_speed * pressure_retract_time # mm, the distance from the retract point at which to stop the retraction
-pressure_retract_dip = 0.200            # TO-DO : use or delete. mm, the slight negative Z offset to dip down for breaking the remaining filaments after extrusion
-layer_height_fraction = 80.0            # %, default layer height fraction = 85% of nozzle diameter
-layer_xy_offset = 0.0                   # TO-DO : use or delete. mm, default alternate layer offset in XY
-start_x = 0.0                          # mm, X distance from origin to corner of overall dimensions
-start_y = 0.0                          # mm, Y distance from origin to corner of overall dimensions
+# mm/s, default max travel speed for the Fanuc movements
+travel_speed = 100
+# mm/s, default max target printing speed for the Fanuc movements
+scaff_speed = 50
+# mm/s, default max target printing speed for Fanuc rotations
+rot_speed = 50
+# TO-DO : use or delete. default registry for travel speed for the Fanuc movements
+reg_travel_speed = 'R[20]'
+# TO-DO : use or delete. default registry for printing speed for the Fanuc movements
+reg_scaff_speed = 'R[21]'
+# TO-DO : use or delete. default registry for printing speed for the Fanuc rotations
+reg_rot_speed = 'R[25]'
+# voltage, list of available values for scaffold printing speed. See multinozzle controler.
+scaff_extr_speed = ['0-1 VDC', '1-2 VDC', '2-3 VDC', '3-4 VDC',
+                    '4-5 VDC', '5-6 VDC', '6-7 VDC', '7-8 VDC', '8-9 VDC', '9-10 VDC', 4]
+# s, time in seconds to wait for the pressure to build up before starting the print
+pressure_buildup_time = 5.0
+# mm, adds a Z offset when building up the pressure to avoir accumulating material on the printhead
+pressure_buildup_z = 7.0
+# s, time in seconds to wait for the pressure to relief in the reservoir before no more material should be extruded
+pressure_retract_time = 1.0
+# TO-DO : include in input window. s, wait time after changing layer before starting next extrusion
+pressure_post_retract_time = 2.0*1000
+# mm, the distance from the retract point at which to stop the retraction
+coast_at_end = scaff_speed * pressure_retract_time
+# TO-DO : use or delete. mm, the slight negative Z offset to dip down for breaking the remaining filaments after extrusion
+pressure_retract_dip = 0.200
+# %, default layer height fraction = 85% of nozzle diameter
+layer_height_fraction = 80.0
+# TO-DO : use or delete. mm, default alternate layer offset in XY
+layer_xy_offset = 0.0
+# mm, X distance from origin to corner of overall dimensions
+start_x = 0.0
+# mm, Y distance from origin to corner of overall dimensions
+start_y = 0.0
 start_z = 0.0
-center_print = ['None','On X','On Y','Both',0] # Apply the necessary offset to center the scaffold network on X axis, Y axis or both. Works when start_x and start y = 0
-layer_change_clearance =  0.0           # mm, the clearange distance at which to raise the printhead while rotating & changing layer to prevent colision. MIGHT BE USELESS
+# Apply the necessary offset to center the scaffold network on X axis, Y axis or both. Works when start_x and start y = 0
+center_print = ['None', 'On X', 'On Y', 'Both', 0]
+# mm, the clearange distance at which to raise the printhead while rotating & changing layer to prevent colision. MIGHT BE USELESS
+layer_change_clearance = 0.0
 layer_change_bleed_nominal = '26.0, 40.0'
-layer_change_bleed = 26.0               # mm, length of deposition for first layer before first wall and after last wall
-layer_change_bleed_clearance = 4.0      # mm, vertical offset applied to the end of bleeding when changing layers to avoid gathering / smudging material under the printhead
+# mm, length of deposition for first layer before first wall and after last wall
+layer_change_bleed = 26.0
+# mm, vertical offset applied to the end of bleeding when changing layers to avoid gathering / smudging material under the printhead
+layer_change_bleed_clearance = 4.0
 printing_bleed_nominal = '8.0, 18.75'
-printing_bleed = 8.0                    # mm, length of deposition for second layer before first wall and after last wall
+# mm, length of deposition for second layer before first wall and after last wall
+printing_bleed = 8.0
 approach_length = 10.0                  # mm, length of travel to the first point
-retract_length = 10.0                   # mm, length of retraction from the last point
+# mm, length of retraction from the last point
+retract_length = 10.0
 nb_layers = 2                           # number of layers
-nb_rows = 3                             # number of rows of scaffolds (following X)
-nb_cols = 3                             # number of columns of scaffolds (following Y)
-wall_distance_nominal = '1.0, 0.0'          # mm, wall_distance collection           
-segments_per_scaffold = 1               # Number of points used to create a scaffold unit. Use more to better approximate a curve for non-planar deposition
-pore_size_nominal = '0.750, 0.184'       # µm, the starting (first layer) pore size = air gap distance between filaments of the same layer
-thickness_nominal = '4, 6'               # mm, the corresponding thickness for each pore_size_nominal
-adjust_pore_size= ['None','On X','On Y','Both',0]            # If set to True : will automatically apply a printhead rotation around its axis to adjust the pore size between each filaments across the scaffold layers
-show_targets = [True,False,1]             # TO-DO : remove, set to always false. Show targets list in RobotDK
-show_plot = [True,False,1]                # 3D Plot toolpath at the end of the generation
-plotType = ['2D','3D',1]                  # Specify is plot is 2D or 3D
-show_labels = [True,False,0]                # Show data label on plots for debugging
-debug = [True,False,0]                   # Debug mode : send toolpath to RoboDK if set to False
-export_stats = [True,False,0]             # Export stats : create or not the info file containing the print stats and parameters
-check_col = [True,False,0]              # Set to False to save computation time, but will not check collision of nozzles with the surface
-stopAndGo = [True,False,1]                  # Include stop and go to prevent material losses when changing layers
-show_geom = [True,False,0]                  # Set to True to show the filaments geometry on the 3D visualization
-show_toolpath = [True,False,0]              # Set to True to show the toolpath on the 3D visualization
-show_triad = [True,False,0]                 # Set to True to show the triads on the 3D visualization
-compensateDeformation = [True,False,0]      # Set to True to compensate gaps due to toolpath deformation
-adjustOrigin = [True,False,1]           # Set to True to move the projected origin to the corresponding X and Y origin on the non-planar surface
-exportPrintGeometry = [True,False,1]              # Export the microscaffold print filaments as a vtp object
+# number of rows of scaffolds (following X)
+nb_rows = 3
+# number of columns of scaffolds (following Y)
+nb_cols = 3
+wall_distance_nominal = '1.0, 0.0'          # mm, wall_distance collection
+# Number of points used to create a scaffold unit. Use more to better approximate a curve for non-planar deposition
+segments_per_scaffold = 1
+# µm, the starting (first layer) pore size = air gap distance between filaments of the same layer
+pore_size_nominal = '0.750, 0.184'
+# mm, the corresponding thickness for each pore_size_nominal
+thickness_nominal = '4, 6'
+# If set to True : will automatically apply a printhead rotation around its axis to adjust the pore size between each filaments across the scaffold layers
+adjust_pore_size = ['None', 'On X', 'On Y', 'Both', 0]
+# TO-DO : remove, set to always false. Show targets list in RobotDK
+show_targets = [True, False, 1]
+# 3D Plot toolpath at the end of the generation
+show_plot = [True, False, 1]
+plotType = ['2D', '3D', 1]                  # Specify is plot is 2D or 3D
+# Show data label on plots for debugging
+show_labels = [True, False, 0]
+# Debug mode : send toolpath to RoboDK if set to False
+debug = [True, False, 0]
+# Export stats : create or not the info file containing the print stats and parameters
+export_stats = [True, False, 0]
+# Set to False to save computation time, but will not check collision of nozzles with the surface
+check_col = [True, False, 0]
+# Include stop and go to prevent material losses when changing layers
+stopAndGo = [True, False, 1]
+# Set to True to show the filaments geometry on the 3D visualization
+show_geom = [True, False, 0]
+# Set to True to show the toolpath on the 3D visualization
+show_toolpath = [True, False, 0]
+# Set to True to show the triads on the 3D visualization
+show_triad = [True, False, 0]
+# Set to True to compensate gaps due to toolpath deformation
+compensateDeformation = [True, False, 0]
+# Set to True to move the projected origin to the corresponding X and Y origin on the non-planar surface
+adjustOrigin = [True, False, 1]
+# Export the microscaffold print filaments as a vtp object
+exportPrintGeometry = [True, False, 1]
 
 # MTG parameters / not user input, for dev
-logoPath = "logo\MTG_logo_v2_156x62.png" # MTG logo image path 
-logo = [logoPath,156,62]                 # MTG logo infos
-prefFolder = 'prefs\\'                   # The folder where the general preferences are located
-meshFolder = 'prefs\meshes\\'          # The folder where the meshes for the projection surfaces are located
-projectFolder = 'prefs\projects\\'      # The folder where the project files are located
-exportFolder = 'exports\\'              # The folder where all exports will be saved
-last_startup_params_file = 'startup_last_params.json'          # The file where the last user parameters are saved in
-last_params_file = 'mltnzl_last_params.json'                   # The file where the last user parameters are saved in
-last_projection_params_file = 'projection_last_params.json'    # The file where the last user parameters are saved in
-rdk_reupload_prog_file = ''             # A .py file that can be used to reupload the already generated toolpath in RoboDK
+logoPath = "logo\MTG_logo_v2_156x62.png"  # MTG logo image path
+logo = [logoPath, 156, 62]                 # MTG logo infos
+# The folder where the general preferences are located
+prefFolder = 'prefs\\'
+# The folder where the meshes for the projection surfaces are located
+meshFolder = 'prefs\meshes\\'
+# The folder where the project files are located
+projectFolder = 'prefs\projects\\'
+# The folder where all exports will be saved
+exportFolder = 'exports\\'
+# The file where the last user parameters are saved in
+last_startup_params_file = 'startup_last_params.json'
+# The file where the last user parameters are saved in
+last_params_file = 'mltnzl_last_params.json'
+# The file where the last user parameters are saved in
+last_projection_params_file = 'projection_last_params.json'
+# A .py file that can be used to reupload the already generated toolpath in RoboDK
+rdk_reupload_prog_file = ''
 rdk_reupload_fid = ''                   # The RDK reupload file id
-rotOdd = [180, 0, -90]                  # Euler angles Rx, Ry, Rz values for Odd layers
-rotEven = [180, 0, -180]                # Euler angles Rx, Ry, Rz values for Even layers
-wall_distance = 0                       # mm, distance traveled by the nozzles for the walls creation, for each pore_size_nominal
-curr_process = {'id':0,'multinozzle_width':0,'nozzle_distance':0,'layer_change_bleed':0, 'printing_bleed':0}
-prev_process = {'id':0,'multinozzle_width':0,'nozzle_distance':0,'layer_change_bleed':0, 'printing_bleed':0}
-theta = 0                               # printhead rotation angle around Z for pore size variation
-theta_threshold = 15                     # deg, theta angle threshold to detect for various toolpath adjustments (at 90-75 = 15° for side-by-side deposition when shifting the multinozzle sideways)
-retraction_time = 5000                  # ms, time to wait at the end of the print for retraction when pressure is retrieved
-xOffset = 0                             # Distance required to center the print on X axis
-yOffset = 0                             # Distance required to center the print on Y axis
-projection_pos = {}                     # Dict of all layer 1 and 2 x,y,z projected positions to be reused for other layers (preventing re-evaluation of the NURBS)
-col_offsets = {}    	                # Dict of collision offsets of the first layer to offset the other layers
-collision_clearance = 0.250             # mm, offset aplied to a position via its normal when in collision with the surface
-prevRefPos = {'pos':None, 'offset':np.array([0,0,0])}   # reference position variable for gap adjustment
-overallDimRefPos = {'pos':None}         # position of the overall dimension of the microscaffoldm located in the middle of the last printed microscaffold unit
-show_footprint = True                   # Show or hide the multinozzle footprint on the Mayavi plot
-project_filaments = False                # Project each filaments on the surface if show_geom is True
+# Euler angles Rx, Ry, Rz values for Odd layers
+rotOdd = [180, 0, -90]
+# Euler angles Rx, Ry, Rz values for Even layers
+rotEven = [180, 0, -180]
+# mm, distance traveled by the nozzles for the walls creation, for each pore_size_nominal
+wall_distance = 0
+curr_process = {'id': 0, 'multinozzle_width': 0,
+                'nozzle_distance': 0, 'layer_change_bleed': 0, 'printing_bleed': 0}
+prev_process = {'id': 0, 'multinozzle_width': 0,
+                'nozzle_distance': 0, 'layer_change_bleed': 0, 'printing_bleed': 0}
+# printhead rotation angle around Z for pore size variation
+theta = 0
+# deg, theta angle threshold to detect for various toolpath adjustments (at 90-75 = 15° for side-by-side deposition when shifting the multinozzle sideways)
+theta_threshold = 15
+# ms, time to wait at the end of the print for retraction when pressure is retrieved
+retraction_time = 5000
+# Distance required to center the print on X axis
+xOffset = 0
+# Distance required to center the print on Y axis
+yOffset = 0
+# Dict of all layer 1 and 2 x,y,z projected positions to be reused for other layers (preventing re-evaluation of the NURBS)
+projection_pos = {}
+# Dict of collision offsets of the first layer to offset the other layers
+col_offsets = {}
+# mm, offset aplied to a position via its normal when in collision with the surface
+collision_clearance = 0.250
+# reference position variable for gap adjustment
+prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+# position of the overall dimension of the microscaffoldm located in the middle of the last printed microscaffold unit
+overallDimRefPos = {'pos': None}
+# Show or hide the multinozzle footprint on the Mayavi plot
+show_footprint = True
+# Project each filaments on the surface if show_geom is True
+project_filaments = False
 
 # Plot variables
 xs = []                                 # X list of values for 3D plot
@@ -277,9 +361,12 @@ normals = []                            # vector list of normal
 tangentsu = []                          # vector list of tangents following u
 tangentsv = []                          # vector list of tangents following v
 collisions = []                         # vector list of collision footprints
-collisions_coords = []                  # XYZ coordinates list for collision coordinates
-printhead_locations = []                # XYZ coordinates list for 3D plot of multinozzle footprint
-nozzles_locations = []                  # XYZ coordinates list for 3D plot of filaments
+# XYZ coordinates list for collision coordinates
+collisions_coords = []
+# XYZ coordinates list for 3D plot of multinozzle footprint
+printhead_locations = []
+# XYZ coordinates list for 3D plot of filaments
+nozzles_locations = []
 
 heronFoot = []
 heronPt1 = []
@@ -290,38 +377,53 @@ heronPt3 = []
 meshColor = (205/255, 196/255, 180/255)
 NURBScolor = (52/255, 114/255, 161/255)
 NURBSwireColor = (52/255, 77/255, 161/255)
-yellowColor = (1,1,0)
+yellowColor = (1, 1, 0)
 orangeColor = (255/255, 130/255, 0/255)
 purpleColor = (1, 0, 1)
-pinkColor =(230/255, 25/255, 151/255)
+pinkColor = (230/255, 25/255, 151/255)
 cyanColor = (0, 1, 1)
-redColor = (1,0,0)
-greenColor = (0,1,0)
-blueColor = (0,0,1)
-beigeColor = (1,1,0.5)
-blueGreenishColor = (0,1,0.5)
+redColor = (1, 0, 0)
+greenColor = (0, 1, 0)
+blueColor = (0, 0, 1)
+beigeColor = (1, 1, 0.5)
+blueGreenishColor = (0, 1, 0.5)
 
 # Gap adjustment variables
-targetGapDistance = 0                   # mm, target distance of adjusted gap between printing pass
+# mm, target distance of adjusted gap between printing pass
+targetGapDistance = 0
 gapDistance = 0
-debugGapAdjust = False                   # Set to True to add the gap adjustment collection items to the visualization
-debugAutoAdjustPoreSize = False          # Set to True to add the gap adjustment collection items to the visualization (see Heron pts as well)
-lastRef = None                          # Position of the last reference point for the second layer
-refPositions = []                       # List of reference positions to adjust the gap
-wrongPosGap = []                        # List of initial positions of unadjusted toolpath coordinates
-newPosGap = []                          # List of newly adjusted positions of toolpath coordinates
-posToCheck = []                         # List of points used to find the closest point on the surface for adjusting gaps
-dirVectors = []                         # List of vectors showing the direction of the gap adjustment for each coordinate
+# Set to True to add the gap adjustment collection items to the visualization
+debugGapAdjust = False
+# Set to True to add the gap adjustment collection items to the visualization (see Heron pts as well)
+debugAutoAdjustPoreSize = False
+# Position of the last reference point for the second layer
+lastRef = None
+# List of reference positions to adjust the gap
+refPositions = []
+# List of initial positions of unadjusted toolpath coordinates
+wrongPosGap = []
+# List of newly adjusted positions of toolpath coordinates
+newPosGap = []
+# List of points used to find the closest point on the surface for adjusting gaps
+posToCheck = []
+# List of vectors showing the direction of the gap adjustment for each coordinate
+dirVectors = []
 
 # Iteration parameters of the getClosest function
-col_check_precision = 0.05             # mm, the precision at which the nearest coordinate can be found
-col_check_step = 0.05                  # mm, the step distance to move to get closer to the target point
-col_check_stop = 100000                 # number of iteration to stop the getClosest function algorithm
+# mm, the precision at which the nearest coordinate can be found
+col_check_precision = 0.05
+# mm, the step distance to move to get closer to the target point
+col_check_step = 0.05
+# number of iteration to stop the getClosest function algorithm
+col_check_stop = 100000
 
 # Post-process variables
-program_name = ''                       # Program name for RoboDK and other exports filename
-currPos = [0,0,0]                       # Current position used for statistics calculation
-lastPos = [0,0,0]                       # Last current position used for statistics calculation
+# Program name for RoboDK and other exports filename
+program_name = ''
+# Current position used for statistics calculation
+currPos = [0, 0, 0]
+# Last current position used for statistics calculation
+lastPos = [0, 0, 0]
 print_dist = 0                          # Total forecast of the print distance
 tot_volume = 0                          # Total forecast print volume
 print_time = 0                          # Total forecast printing time
@@ -371,7 +473,8 @@ def addPass(i, r, c, prevPos, addCoast):
                 coastY = start_y + totDimY - coast_at_end
                 if y > coastY:
                     needCoast = False
-                    coastCoord = [x, coastY] + prevPos[2:6] + [print_direction] + ['coast']
+                    coastCoord = [x, coastY] + prevPos[2:6] + \
+                        [print_direction] + ['coast']
                     coords.append(coastCoord)
 
         # Even layers 2,4,6,... (i = 1, 3, 5, ...) --------------------------------
@@ -390,7 +493,8 @@ def addPass(i, r, c, prevPos, addCoast):
                 coastX = start_x + coast_at_end
                 if x < coastX:
                     needCoast = False
-                    coastCoord = [coastX, y] + prevPos[2:6] + [print_direction] + ['coast']
+                    coastCoord = [coastX, y] + prevPos[2:6] + \
+                        [print_direction] + ['coast']
                     coords.append(coastCoord)
 
         prevPos = [x, y] + prevPos[2:6] + [print_direction] + ['pass']
@@ -399,7 +503,7 @@ def addPass(i, r, c, prevPos, addCoast):
         coords.append(prevPos)
     # print(coords)
     # print('----------------------------------')
-        
+
     # Perpendicular offset for wall creation ---------------------------------
     # if the printed scaffold is not the last one of the col or row
     if wall_distance > 0 and c != (nb_cols if i % 2 == 0 else nb_rows) - 1:
@@ -407,22 +511,22 @@ def addPass(i, r, c, prevPos, addCoast):
         cos_d = np.cos(np.radians(theta)) * wall_distance
         sin_d = np.sin(np.radians(theta)) * wall_distance
 
-        if c % 2 == 0: # if scaffold to be printing is after even values of c
+        if c % 2 == 0:  # if scaffold to be printing is after even values of c
             if i % 2 == 0:
-                #x = prevPos[0] - wall_distance
+                # x = prevPos[0] - wall_distance
                 x = prevPos[0] - cos_d
                 y = prevPos[1] - sin_d
             else:
-                #y = prevPos[1] + wall_distance
+                # y = prevPos[1] + wall_distance
                 x = prevPos[0] - sin_d
                 y = prevPos[1] + cos_d
-        else: # if scaffold to be printing is after odd values of c
+        else:  # if scaffold to be printing is after odd values of c
             if i % 2 == 0:
-                #x = prevPos[0] + wall_distance
+                # x = prevPos[0] + wall_distance
                 x = prevPos[0] + cos_d
                 y = prevPos[1] + sin_d
             else:
-                #y = prevPos[1] - wall_distance
+                # y = prevPos[1] - wall_distance
                 x = prevPos[0] + sin_d
                 y = prevPos[1] - cos_d
 
@@ -443,38 +547,40 @@ def addPass(i, r, c, prevPos, addCoast):
 #       r : int, network row index
 #       prevPos : list, previous cartesian position kept in memory
 #
+
+
 def addConnection(i, r, prevPos):
     coords = []
 
     # Always add a bleeding after all the pass
-    if r == (nb_rows if i % 2 == 0 else nb_cols) - 1: # if last pass of the layer
+    if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
         firstBleed = layer_change_bleed
         special = ''
         if stopAndGo:
             special += ',coast pause'
         if layer_change_bleed_clearance > 0:
-            #pecial = 'None'
+            # pecial = 'None'
             special += ',clearColNP'
-    else: # if last pass of a printing pass (not the last of the layer)
+    else:  # if last pass of a printing pass (not the last of the layer)
         firstBleed = printing_bleed
-        #special = ''
+        # special = ''
         special = 'lastPass'
         if i == 1:
             special += ',refPos'
     if i % 2 == 0:
         if r % 2 == 0:
-            y = prevPos[1] +  firstBleed
+            y = prevPos[1] + firstBleed
             print_direction = '+y'
         else:
-            y = prevPos[1] -  firstBleed
+            y = prevPos[1] - firstBleed
             print_direction = '-y'
         x = prevPos[0]
     else:
         if r % 2 == 0:
-            x = prevPos[0] -  firstBleed
+            x = prevPos[0] - firstBleed
             print_direction = '-x'
         else:
-            x = prevPos[0] +  firstBleed
+            x = prevPos[0] + firstBleed
             print_direction = '+x'
         y = prevPos[1]
 
@@ -550,28 +656,28 @@ def addConnection(i, r, prevPos):
         # Create a new Start point after the first bleeding traveling from one pass to another
         if i % 2 == 0:
             if r % 2 == 0:
-                y = prevPos[1] -  printing_bleed
+                y = prevPos[1] - printing_bleed
                 print_direction = '-y'
             else:
-                y = prevPos[1] +  printing_bleed
+                y = prevPos[1] + printing_bleed
                 print_direction = '+y'
             x = prevPos[0]
         else:
             if r % 2 == 0:
-                x = prevPos[0] +  printing_bleed
+                x = prevPos[0] + printing_bleed
                 print_direction = '+x'
             else:
-                x = prevPos[0] -  printing_bleed
+                x = prevPos[0] - printing_bleed
                 print_direction = '-x'
             y = prevPos[1]
 
         special = 'refPos' if i == 1 else ''
         prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
         coords.append(prevPos)
-        
+
     else:   # If we are at end of a layer
         # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
-        if layer_change_clearance > 0: 
+        if layer_change_clearance > 0:
             offsetZ = prevPos[2] + layer_change_clearance
             prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
             coords.append(prevPos)
@@ -589,6 +695,8 @@ def addConnection(i, r, prevPos):
 #       i : int, layer index<
 #       prevPos : list, previous cartesian position kept in memory
 #
+
+
 def changeOrientation(i, prevPos):
     global prevRefPos
     coords = []
@@ -602,19 +710,22 @@ def changeOrientation(i, prevPos):
         # coords.append(prevPos)
 
     # Backing up to get in position for next layer's pass
-    if i % 2 ==0:
-        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE) + (prev_process['nozzle_distance'] - curr_process['nozzle_distance']) + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
-        y = prevPos[1] - (layer_change_bleed + MULTINOZZLE_WIDTH / 2) + (curr_process['multinozzle_width']/2 - prev_process['multinozzle_width']/2)# + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
+    if i % 2 == 0:
+        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE) + (prev_process['nozzle_distance'] -
+                                                                                           curr_process['nozzle_distance']) + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
+        y = prevPos[1] - (layer_change_bleed + MULTINOZZLE_WIDTH / 2) + (curr_process['multinozzle_width']/2 -
+                                                                         prev_process['multinozzle_width']/2)  # + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
         print_direction = '+y'
     else:
         x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2)
-        y = prevPos[1] - (layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE)
+        y = prevPos[1] - (layer_change_bleed +
+                          MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE)
         print_direction = '-x'
 
     # prevRefPos always resets at layer change
     if not proj_file == 'None':
-        prevRefPos = {'pos':None, 'offset':np.array([0,0,0])}
-    
+        prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+
     # Special target attribut selection
     if i <= 2:
         special = 'refPos'
@@ -622,13 +733,12 @@ def changeOrientation(i, prevPos):
         special = ''
     # if stopAndGo:
     #     special += ',coast pause'
-    # else:   
+    # else:
     #     special += ',clearColNP'
-        
-    prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]  
+
+    prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
     coords.append(prevPos)
     special = ''
-
 
     # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
     if layer_change_clearance > 0:
@@ -645,7 +755,7 @@ def changeOrientation(i, prevPos):
     else:
         x = prevPos[0] - layer_change_bleed
         print_direction = '-x'
-        
+
     if i == 1:
         special = 'refPos'
     #     special = 'refPos'
@@ -661,7 +771,7 @@ def changeOrientation(i, prevPos):
 # Function targetAndMove
 #
 #   Description: processes each calculated coordinate of the network. The function
-#                calls the non-planar projection method, integrates the toolpath 
+#                calls the non-planar projection method, integrates the toolpath
 #                with RoboDK, manages special moves and calculates
 #                the print distance.
 #
@@ -676,29 +786,33 @@ def changeOrientation(i, prevPos):
 #       calculateDist : bool, flag to include the processed position into the
 #                       distance calculation or not
 #
+
+
 def targetAndMove(name, position, i, debug=False, showOnGraph=True, calculateDist=True):
     global currPos
     global lastPos
     global print_dist
 
     # Get the position's real position (projected or not), it's rotation matrix and special target attribution
-    realPosition, rotMat, special = managePosProjection(name, position, i, debug, showOnGraph)
+    realPosition, rotMat, special = managePosProjection(
+        name, position, i, debug, showOnGraph)
 
     # # Z position clearance to try and avoid smudging the material losses accumulation when changing layers
     # if ('clearColNP' in special or 'purge' in special or 'coast pause' in special) and layer_change_bleed_clearance > 0:
     #     realPosition[2] = realPosition[2] + layer_change_bleed_clearance # mm
-                   
+
     # RoboDK integration ------------------------------------------------------------------------------
     if not debug:
-        #target = RDK.AddTarget(name)
-        
+        # target = RDK.AddTarget(name)
+
         if not proj_file == 'None':
             # Creation of the pose matrix by RoboDK's syntax using the projected point's rotation matrix
-            target = transl(realPosition[0], realPosition[1], realPosition[2])*Mat(rotMat.tolist())
-            #target.setPose(poseMat)
+            target = transl(
+                realPosition[0], realPosition[1], realPosition[2])*Mat(rotMat.tolist())
+            # target.setPose(poseMat)
         else:
             # Creation of the pose matrix by RoboDK's syntax using the planar generated coordinate
-            #target.setPose(Fanuc_2_Pose(realPosition))
+            # target.setPose(Fanuc_2_Pose(realPosition))
             target = Fanuc_2_Pose(realPosition)
 
         # RoboDK move instruction
@@ -708,14 +822,13 @@ def targetAndMove(name, position, i, debug=False, showOnGraph=True, calculateDis
         if 'coast' in special:
             # Stop the extrusion for the end of a layer
             prog.RunInstruction('Extruder(''OFF'')')
-        elif 'coast pause' in special:            
+        elif 'coast pause' in special:
             # Add a pause after the completion of a layer
             prog.Pause(pressure_post_retract_time)
-        elif 'purge' in special: 
+        elif 'purge' in special:
             # Start the extrusion for next layer
             prog.RunInstruction('Extruder(''ON'','+scaff_extr_speed+')')
             prog.Pause(pressure_buildup_time)
-            
 
     # Toolpath visualization intergration and statistics ----------------------------------------------
     # Updating the plot collection and toolpath statistics
@@ -732,7 +845,7 @@ def targetAndMove(name, position, i, debug=False, showOnGraph=True, calculateDis
 # Function managePosProjection
 #
 #   Description: manages the projection of each position of the toolpath
-#                calls the collision detection function 
+#                calls the collision detection function
 #
 #   Returns:
 #       realPosition : list, the final position of the coordinate, planar or not
@@ -746,27 +859,30 @@ def targetAndMove(name, position, i, debug=False, showOnGraph=True, calculateDis
 #       debug : bool, flag to prevent calling the RoboDK API
 #       showOnGraph : bool, flag to add processed data to the visualization plot
 #
+
+
 def managePosProjection(name, position, i, debug, showOnGraph):
     rotMat = None
     global lastRef
-    
+
     # Uncomment to debug targets
-    #print('%s = %s' % (name, str(position)))
-    
+    # print('%s = %s' % (name, str(position)))
+
     # Retrieving the position's informations
     if len(position) > 7:
         x, y, z, a, b, c, print_direction, special = position
     else:
         x, y, z, a, b, c, print_direction = position
         special = ''
-   
+
     # List of special targets requiring collision check, triad definition or specific operations
-    specialTargets = ['Retract', 'L3R1C1Start1', 'L3R1C1Start2']#, 'L3R1C1Start3']
+    specialTargets = ['Retract', 'L3R1C1Start1',
+                      'L3R1C1Start2']  # , 'L3R1C1Start3']
 
     # Z position clearance to try and avoid smudging the material losses accumulation when changing layers
     if ('clearColNP' in special) and layer_change_bleed_clearance > 0:
-        z = z + layer_change_bleed_clearance # mm
-      
+        z = z + layer_change_bleed_clearance  # mm
+
     # Non-planar toolpath. Projection of the coordinate on the surface ------------------------------------------------------
     if not proj_file == 'None':
         # ===============================================================
@@ -776,8 +892,8 @@ def managePosProjection(name, position, i, debug, showOnGraph):
             relu, relv, exceedX, exceedY = relativeUVbyXY(x, y)
 
             # The uv list must contain floats value for normal assessment
-            uv = [float(relu),float(relv)]
-            
+            uv = [float(relu), float(relv)]
+
             # Finding the normal at the evaluated point of the first two layers only
             normal = operations.normal(surf, uv, normalize=True)
             normal = [list(n) for n in normal]
@@ -785,96 +901,109 @@ def managePosProjection(name, position, i, debug, showOnGraph):
             # Finding the tangents (in the printing direction and perpendicular) at the evaluated point of the first two layers
             tangent = operations.tangent(surf, uv, normalize=True)
             tangent = [list(ta) for ta in tangent]
-     
-            ptEval = surf.evaluate_single(uv)   # Evaluate the point on the surface according to it's relative position on x and y
-                
+
+            # Evaluate the point on the surface according to it's relative position on x and y
+            ptEval = surf.evaluate_single(uv)
+
             # Assign new coordinates inside or outside the NURBS
-            ptEval = assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent)                    
-            
+            ptEval = assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent)
+
             # ==============================================================================
             # Adjustment of the toolpath to correct the gap created by toolpath deformation
             if compensateDeformation and (i <= 1 or name in specialTargets):
                 normal = operations.normal(surf, uv, normalize=True)
                 normal = [list(n) for n in normal]
-                
-                if 'refPos' in special:      
+
+                if 'refPos' in special:
                     # Calling the adjustGap method for reference positions
-                    ptEval, uv = adjustGap(ptEval, uv, normal, i, print_direction, name, special)
+                    ptEval, uv = adjustGap(
+                        ptEval, uv, normal, i, print_direction, name, special)
                 else:
-                    # Side adjustment of the rest of the point for the first layer according to the previous 
+                    # Side adjustment of the rest of the point for the first layer according to the previous
                     #   calculated offset for the current printing pass
                     offset = prevRefPos['offset']
-                    
+
                     if np.linalg.norm(offset) > 0:
                         to_check = offset + ptEval
-                        ptEval, distance, isClosest, uv = getClosest(to_check, name, normal[1], col_check_precision, col_check_step, col_check_stop, False, True)
-                     
-                lastRef = ptEval                       
+                        ptEval, distance, isClosest, uv = getClosest(
+                            to_check, name, normal[1], col_check_precision, col_check_step, col_check_stop, False, True)
+
+                lastRef = ptEval
                 if 'lastPass' in special:
                     prevRefPos['pos'] = ptEval
-                                           
-                relu, relv, exceedX, exceedY = relativeUVbyXY(ptEval[0], ptEval[1])
-                
+
+                relu, relv, exceedX, exceedY = relativeUVbyXY(
+                    ptEval[0], ptEval[1])
+
                 # Finding the normal at the evaluated point of the first two layers only
                 normal = operations.normal(surf, uv, normalize=True)
                 normal = [list(n) for n in normal]
 
                 # Finding the tangents (in the printing direction and perpendicular) at the evaluated point of the first two layers
-                tangent = operations.tangent(surf, uv, normalize=True)  
-                tangent = [list(ta) for ta in tangent]         
-             
+                tangent = operations.tangent(surf, uv, normalize=True)
+                tangent = [list(ta) for ta in tangent]
+
             # =============================================================================
             # Tangents identification with respect to printing direction
             # Triad orientation for deposition going on +/- y
             if print_direction == '+y' or print_direction == '-y':
-                if not debug: # for RoboDK
+                if not debug:  # for RoboDK
                     perp_tangent = [tangent[0], tangent[1]]
-                    #direct_tangent = tangent[0], tuple(i*-1 for i in tangent[2])
+                    # direct_tangent = tangent[0], tuple(i*-1 for i in tangent[2])
                 else:
-                    perp_tangent = [tangent[0], list(np.multiply(-1, tangent[1]))]
+                    perp_tangent = [tangent[0], list(
+                        np.multiply(-1, tangent[1]))]
                     # perp_tangent = [tangent[0], [i*-1 for i in tangent[1]]]
                 direct_tangent = [tangent[0], tangent[2]]
             # Triad orientation for deposition going on +/- x
             elif print_direction == '-x' or print_direction == '+x':
-                if not debug: # for RoboDK
-                    perp_tangent = [tangent[0], list(np.multiply(-1, tangent[2]))]
+                if not debug:  # for RoboDK
+                    perp_tangent = [tangent[0], list(
+                        np.multiply(-1, tangent[2]))]
                     # perp_tangent = [tangent[0], [i*-1 for i in tangent[2]]]
                 else:
                     perp_tangent = [tangent[0], tangent[2]]
                 direct_tangent = [tangent[0], tangent[1]]
-   
+
             # ===============================================================================
             # Checking the local curvature for concave of convex local region
             if wall_distance == 0 and ((i == 0 and 'X' in adjust_pore_size) or (i == 1 and 'Y' in adjust_pore_size) or 'Both' in adjust_pore_size):
                 # Calculating the three points of the circle arc
-                mltnzl_limit_coords = getMultinozzleFootprint(perp_tangent, MULTINOZZLE_WIDTH)
+                mltnzl_limit_coords = getMultinozzleFootprint(
+                    perp_tangent, MULTINOZZLE_WIDTH)
                 # p1_getClosest = multiprocessing.Process(target = getClosest, args=(list(mltnzl_limit_coords[1]),'ptHeron1',normal[1], col_check_precision, col_check_step, col_check_stop, False, True))
                 # p2_getClosest = multiprocessing.Process(target = getClosest, args=(list(mltnzl_limit_coords[0]),'ptHeron2',normal[1], col_check_precision, col_check_step, col_check_stop, False, True))
-                ptHeron1 = getClosest(mltnzl_limit_coords[1],name + '_ptHeron1',normal[1], col_check_precision, col_check_step, col_check_stop, False, True)[0]
-                ptHeron2 = getClosest(mltnzl_limit_coords[0],name + '_ptHeron2',normal[1], col_check_precision, col_check_step, col_check_stop, False, True)[0]
-                local_three_pts = [np.array(ptHeron1), np.array(perp_tangent[0]), np.array(ptHeron2)]                
-                
+                ptHeron1 = getClosest(mltnzl_limit_coords[1], name + '_ptHeron1', normal[1],
+                                      col_check_precision, col_check_step, col_check_stop, False, True)[0]
+                ptHeron2 = getClosest(mltnzl_limit_coords[0], name + '_ptHeron2', normal[1],
+                                      col_check_precision, col_check_step, col_check_stop, False, True)[0]
+                local_three_pts = [np.array(ptHeron1), np.array(
+                    perp_tangent[0]), np.array(ptHeron2)]
+
                 # Debugging plot
                 heronFoot.append(mltnzl_limit_coords)
                 heronPt1.append(ptHeron1)
                 heronPt2.append(perp_tangent[0])
                 heronPt3.append(ptHeron2)
-                
+
                 # Calculating the local radius at the multinozzle footprint
                 local_radius = heronRadius(local_three_pts)
-                
+
                 # If radius is not infinite (non-planar)
                 if not m.isinf(local_radius):
                     curr_radius = local_radius
-                    gamma = m.atan(0.5*curr_process['multinozzle_width'] / curr_radius)
-                    
+                    gamma = m.atan(
+                        0.5*curr_process['multinozzle_width'] / curr_radius)
+
                     # Calculating second derivative at the ptEval
                     ders = surf.derivatives(uv[0], uv[1], 2)
                     if i == 0:
-                        curvature = ders[2][0]    # fuu = second derivite of w.r.t u
+                        # fuu = second derivite of w.r.t u
+                        curvature = ders[2][0]
                     else:
-                        curvature = ders[0][2]    # fuu = second derivite of w.r.t v
-                                    
+                        # fuu = second derivite of w.r.t v
+                        curvature = ders[0][2]
+
                     # # Calculating current radius
                     # if curvature[2] > 0: # if curvature is concave, radius is reduced as layers increase
                     #     curr_radius = local_radius - z#NOZZLE_DIAMETER - i*layer_height
@@ -882,11 +1011,11 @@ def managePosProjection(name, position, i, debug, showOnGraph):
                     #     curr_radius = local_radius + z#NOZZLE_DIAMETER + i*layer_height
                     # else:   # no curvature (planar)
                     #     curr_radius = local_radius
-                    
+
                     # Calculating aperture angle on the multinozzle
-                    #gamma = m.atan(0.5*MULTINOZZLE_WIDTH / curr_radius)
-                    #gamma = m.atan(0.5*curr_process['multinozzle_width'] / curr_radius)
-                    
+                    # gamma = m.atan(0.5*MULTINOZZLE_WIDTH / curr_radius)
+                    # gamma = m.atan(0.5*curr_process['multinozzle_width'] / curr_radius)
+
                     # Calculating current radius
                     # if curvature[2] > 0: # if curvature is concave, radius is reduced as layers increase
                     #     curr_radius = local_radius - z#NOZZLE_DIAMETER - i*layer_height
@@ -894,27 +1023,29 @@ def managePosProjection(name, position, i, debug, showOnGraph):
                     #     curr_radius = local_radius + z#NOZZLE_DIAMETER + i*layer_height
                     # else:   # no curvature (planar)
                     #     curr_radius = local_radius
-                        
+
                 # If radius is infinite (planar)
                 else:
-                    curvature = [0,0,0]
+                    curvature = [0, 0, 0]
                     curr_radius = -1
                     gamma = -1
-                
+
             else:
                 if adjust_pore_size and wall_distance > 0 and debug:
-                    print('\nWARNING: auto-adjust pore size has been disable for p = %.3f mm to create straight walls at %s.' % (curr_pore_size, name))
-                curvature = [0,0,0]
+                    print('\nWARNING: auto-adjust pore size has been disable for p = %.3f mm to create straight walls at %s.' %
+                          (curr_pore_size, name))
+                curvature = [0, 0, 0]
                 curr_radius = -1
                 gamma = -1
-            
+
             newX = ptEval[0]
             newY = ptEval[1]
             newZ = ptEval[2]
-            projection_pos[name] = {'x':newX, 'y':newY, 'z':newZ, 'normal':normal, 'perp_tangent':perp_tangent, 'direct_tangent':direct_tangent, 'curr_radius':curr_radius, 'curvature':curvature, 'aperture':gamma}
-            
+            projection_pos[name] = {'x': newX, 'y': newY, 'z': newZ, 'normal': normal, 'perp_tangent': perp_tangent,
+                                    'direct_tangent': direct_tangent, 'curr_radius': curr_radius, 'curvature': curvature, 'aperture': gamma}
+
             colOffset = 0
-        else: 
+        else:
             # ===========================================================================
             # Finding the position following previous point position of layer 1 or 2
             # Assign a target reference on the last corresponding projected layer
@@ -922,7 +1053,8 @@ def managePosProjection(name, position, i, debug, showOnGraph):
                 try:
                     proj_target = 'L1' + name[len('L'+str(i+1)):]
                     projection_pos[proj_target]
-                except: # The case of layer 3 (after change from layer 2 to 3, we have a start of layer scheme different than the print approach)
+                # The case of layer 3 (after change from layer 2 to 3, we have a start of layer scheme different than the print approach)
+                except:
                     proj_target = 'L3' + name[len('L'+str(i+1)):]
                     projection_pos[proj_target]
 
@@ -939,47 +1071,55 @@ def managePosProjection(name, position, i, debug, showOnGraph):
             curr_radius = projection_pos[proj_target]['curr_radius']
             curvature = projection_pos[proj_target]['curvature']
             gamma = projection_pos[proj_target]['aperture']
-            
+
             try:
                 # we also try to add the collision offset of the point under it if the point was offset because of a detected collision
-                colTarget = ''.join([proj_target, '_process', str(curr_process['id'])])
+                colTarget = ''.join(
+                    [proj_target, '_process', str(curr_process['id'])])
                 colOffset = col_offsets[colTarget]
                 if debug:
-                    print('target : %s, offset = %.3f (from %s)' % (name, colOffset, colTarget))#'L1' + name[len('L'+str(i)):]))
+                    # 'L1' + name[len('L'+str(i)):]))
+                    print('target : %s, offset = %.3f (from %s)' %
+                          (name, colOffset, colTarget))
             except:
                 # Here it means that the corresponding point of layer 1 or 2 did not collision, hence no collision offset to apply
                 colOffset = 0
-                    
+
         # =================================================================
         # Calculating the local curvature at layer height
         if not curr_radius == -1:
-            if curvature[2] > 0: # if curvature is concave, radius is reduced as layers increase
-                curr_radius = curr_radius - z + NOZZLE_DIAMETER#i*layer_height# - colOffset
-            elif curvature[2] < 0:  # if curvature is convex, radius is increased as layers increase
-                curr_radius = curr_radius + z - NOZZLE_DIAMETER#i*layer_height# + colOffset
+            if curvature[2] > 0:  # if curvature is concave, radius is reduced as layers increase
+                curr_radius = curr_radius - z + NOZZLE_DIAMETER  # i*layer_height# - colOffset
+            # if curvature is convex, radius is increased as layers increase
+            elif curvature[2] < 0:
+                curr_radius = curr_radius + z - NOZZLE_DIAMETER  # i*layer_height# + colOffset
 
         # ===============================================================================
         # If the pore size adjustment is True, then we need to rotate the multinozzle on its axis
-        if adjust_pore_size != 'None' and not curr_radius == -1:                
+        if adjust_pore_size != 'None' and not curr_radius == -1:
             # Calculation of new projected multinozzle width
             curr_multinozzle_width = 2*(curr_radius * m.tan(gamma))
-            
+
             # Calculation of the gap difference to add to the curr_multinozzle_width
-            curr_gap = gapDistance * curr_multinozzle_width / curr_process['multinozzle_width']
-            curr_multinozzle_width += (gapDistance - curr_gap)# + NOZZLE_DIAMETER # ND does not work with p = 184
-            
+            curr_gap = gapDistance * curr_multinozzle_width / \
+                curr_process['multinozzle_width']
+            # + NOZZLE_DIAMETER # ND does not work with p = 184
+            curr_multinozzle_width += (gapDistance - curr_gap)
+
             if curr_multinozzle_width > MULTINOZZLE_TRUE_WIDTH:
                 if debug:
-                    print('\nWARNING: apparent multinozzle width (%.4f mm) for "%s" cannot be bigger than the real multinozzle width (%.4f mm).' % (curr_multinozzle_width, name, MULTINOZZLE_TRUE_WIDTH))
+                    print('\nWARNING: apparent multinozzle width (%.4f mm) for "%s" cannot be bigger than the real multinozzle width (%.4f mm).' % (
+                        curr_multinozzle_width, name, MULTINOZZLE_TRUE_WIDTH))
                 curr_multinozzle_width = MULTINOZZLE_TRUE_WIDTH
-                
+
             # Calculation of printhead rotation
-            d_theta = m.degrees(m.acos(np.clip((curr_multinozzle_width / MULTINOZZLE_TRUE_WIDTH), -1, 1))) - theta
+            d_theta = m.degrees(m.acos(
+                np.clip((curr_multinozzle_width / MULTINOZZLE_TRUE_WIDTH), -1, 1))) - theta
 
         else:
             d_theta = 0
-        #print('\ni = %i, name = %s, p = %.3f mm, dth = %.3f' % (i, name, curr_pore_size, d_theta))
-        
+        # print('\ni = %i, name = %s, p = %.3f mm, dth = %.3f' % (i, name, curr_pore_size, d_theta))
+
         # ===============================================================================
         # Updating the point position according to the projection informations
         # listNormal = list(normal)
@@ -989,10 +1129,12 @@ def managePosProjection(name, position, i, debug, showOnGraph):
         newX += dx
         newY += dy
         newZ += dz
-        
+
         # Update the triad position and rotation according to the new projected position and theta angle
-        normal, perp_tangent, direct_tangent = updatePosTriad(normal, perp_tangent, direct_tangent, [newX, newY, newZ])
-        normal, perp_tangent, direct_tangent = updateRotTriad(normal, perp_tangent, direct_tangent, theta + d_theta)
+        normal, perp_tangent, direct_tangent = updatePosTriad(
+            normal, perp_tangent, direct_tangent, [newX, newY, newZ])
+        normal, perp_tangent, direct_tangent = updateRotTriad(
+            normal, perp_tangent, direct_tangent, theta + d_theta)
 
         # Update the toolpath position to be projected on the surface
         projectedPosition = [newX, newY, newZ, a, b, c]
@@ -1001,8 +1143,10 @@ def managePosProjection(name, position, i, debug, showOnGraph):
         # Checking multinozzle collision with the printing surface
         # Check the 1st + 2nd layer and retract position
         if (i <= 1 or name in specialTargets) and check_col and curr_process['id'] == 0 and showOnGraph:
-            realPosition, is_collision = checkCollision(projectedPosition, perp_tangent, normal, name, debug)
-            normal, perp_tangent, direct_tangent = updatePosTriad(normal, perp_tangent, direct_tangent, realPosition[0:3])
+            realPosition, is_collision = checkCollision(
+                projectedPosition, perp_tangent, normal, name, debug)
+            normal, perp_tangent, direct_tangent = updatePosTriad(
+                normal, perp_tangent, direct_tangent, realPosition[0:3])
 
             # #Recheck the position as long as there is a collision
             # while is_collision:
@@ -1014,15 +1158,16 @@ def managePosProjection(name, position, i, debug, showOnGraph):
             #     normal, perp_tangent, direct_tangent = updatePosTriad(normal, perp_tangent, direct_tangent, realPosition[0:3])
         else:
             realPosition = projectedPosition
-        
+
         # =====================================================================
-        
+
         # Updating the overall dimension reference pos for gap adjustment
         if compensateDeformation and overallDimRefPos['pos'] is None:
             strLastLayerPos = 'L1' + 'R' + str(nb_rows) + 'C' + str(nb_cols)
             if strLastLayerPos in name and special == 'pass':
-                overallDimRefPos['pos'] = [realPosition[0], realPosition[1] - NOZZLE_DISTANCE / 2, realPosition[2]]
-            
+                overallDimRefPos['pos'] = [
+                    realPosition[0], realPosition[1] - NOZZLE_DISTANCE / 2, realPosition[2]]
+
         # Creation of filaments position for post-process visualization
         if show_geom and showOnGraph:
             generateFilaments(perp_tangent, normal, z, project_filaments)
@@ -1045,41 +1190,44 @@ def managePosProjection(name, position, i, debug, showOnGraph):
             # triad = np.matrix([[-listTangent[1][0], -listTangent[1][1], -listTangent[1][2]],
             #                 [-listPerpTangent[1][0], -listPerpTangent[1][1], -listPerpTangent[1][2]],
             #                 [-listNormal[1][0], -listNormal[1][1], -listNormal[1][2]]])
-            
+
             triad = np.matrix([np.multiply(-1, direct_tangent[1]),
-                            np.multiply(-1, perp_tangent[1]),
-                            np.multiply(-1, normal[1])])
+                               np.multiply(-1, perp_tangent[1]),
+                               np.multiply(-1, normal[1])])
 
             # Construction of the rotation matrix as per RoboDK syntax
             rotMat = np.matrix(getRotMat(triad))
-            rotMat = np.hstack((rotMat,[[0],[0],[0]])) # Here we add a column of zeros
-            rotMat = np.vstack((rotMat,[0,0,0,1]))  # Here we add a row of zeros and a 1
+            # Here we add a column of zeros
+            rotMat = np.hstack((rotMat, [[0], [0], [0]]))
+            # Here we add a row of zeros and a 1
+            rotMat = np.vstack((rotMat, [0, 0, 0, 1]))
 
     # Planar toolpath. No projection on the surface ---------------------------------------------------------
-    else:        
-        # Creation of orientation triad for planar 
+    else:
+        # Creation of orientation triad for planar
         if print_direction == '+y' or print_direction == '-y':
-            perp_tangent = [[x,y,z], [-1,0,0]]
-            direct_tangent = [[x,y,z], [0,1,0]]
+            perp_tangent = [[x, y, z], [-1, 0, 0]]
+            direct_tangent = [[x, y, z], [0, 1, 0]]
         # Triad orientation for deposition going on +/- x
         elif print_direction == '-x' or print_direction == '+x':
-            perp_tangent = [[x,y,z], [0,1,0]]
-            direct_tangent = [[x,y,z], [1,0,0]]
-        normal = [[x,y,z],[0,0,1]]
-        normal, perp_tangent, direct_tangent = updateRotTriad(normal, perp_tangent, direct_tangent, theta)
-        
+            perp_tangent = [[x, y, z], [0, 1, 0]]
+            direct_tangent = [[x, y, z], [1, 0, 0]]
+        normal = [[x, y, z], [0, 0, 1]]
+        normal, perp_tangent, direct_tangent = updateRotTriad(
+            normal, perp_tangent, direct_tangent, theta)
+
         # Creation of filaments position for post-process visualization
         if show_geom and showOnGraph:
             generateFilaments(perp_tangent, normal, z)
 
         realPosition = [x, y, z, a, b, c]
-        
+
     # Show the first layer normals & tangeants on the 3D plot
     if (i <= 1 or name in specialTargets) and showOnGraph:
         normals.append(normal)
         tangentsu.append(direct_tangent)
         tangentsv.append(perp_tangent)
-        
+
     # Return the managed position
     return (realPosition, rotMat, special)
 
@@ -1102,23 +1250,28 @@ def managePosProjection(name, position, i, debug, showOnGraph):
 #       exceedY : bool, True is y < evalY or y > evalY (point is outside the surface)
 #       tangent : tuple, the evaluated tangents (on u and v) at [evalX,evalY,evalZ]
 #
+
+
 def assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent):
-    evalX = ptEval[0]    # Get the X component of the evaluated point on the surface
-    evalY = ptEval[1]    # Get the Y component of the evaluated point on the surface
-    evalZ = ptEval[2]    # Get the Z component of the evaluated point on the surface
+    # Get the X component of the evaluated point on the surface
+    evalX = ptEval[0]
+    # Get the Y component of the evaluated point on the surface
+    evalY = ptEval[1]
+    # Get the Z component of the evaluated point on the surface
+    evalZ = ptEval[2]
 
     if not exceedX:
         newX = evalX
     else:
-        newX = x                
+        newX = x
     if not exceedY:
         newY = evalY
     else:
-        newY = y                
-       
+        newY = y
+
     if not exceedX and not exceedY:
         newZ = evalZ
-    else:   
+    else:
         # If the projected coordinate is outside the surface boundaries,
         #   we position the coordinate using the trend of the surface tangents
         posXout = np.array([newX, evalZ])
@@ -1127,27 +1280,27 @@ def assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent):
         posYborder = np.array([evalY, evalZ])
         outXdist = np.linalg.norm(posXout - posXborder)
         outYdist = np.linalg.norm(posYout - posYborder)
-        
+
         # Creation of the vector as function of the exceeding side
         if x < evalX:
-            outXvect = np.array([-outXdist * i for i in tangent[1]])                    
+            outXvect = np.array([-outXdist * i for i in tangent[1]])
         else:
-            outXvect = np.array([outXdist * i for i in tangent[1]])    
+            outXvect = np.array([outXdist * i for i in tangent[1]])
         if y < evalY:
-            outYvect = np.array([-outYdist * i for i in tangent[2]])                    
+            outYvect = np.array([-outYdist * i for i in tangent[2]])
         else:
-            outYvect = np.array([outYdist * i for i in tangent[2]])    
-        
+            outYvect = np.array([outYdist * i for i in tangent[2]])
+
         outsideVect = outXvect + outYvect
         posBorder = np.array([evalX, evalY, evalZ])
         newX, newY, newZ = posBorder + outsideVect
-    
+
     return np.array([newX, newY, newZ])
 
 # Function adjustGap
 #
 #   Description: Moves the ptEval coordinates closer to the prevRefPos in order
-#                to close the gaps created by projection-induced deformation 
+#                to close the gaps created by projection-induced deformation
 #                of the toolpath
 #
 #   Returns:
@@ -1161,52 +1314,55 @@ def assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent):
 #       name : string, name of the current target position of ptEval
 #       special : string, target's specific attribute
 #
+
+
 def adjustGap(ptEval, uv_initial, normal, i, print_direction, name, special):
     global prevRefPos
     global lastRef
-    
+
     # mm, the expected distance between two reference positions / printing pass
-    expectedDist = MULTINOZZLE_WIDTH + gapDistance#  - 2.6
-    
-    # mm, the distance offset with calculated distance and expected one  
-    diff_vect = np.array([0,0,0])
-    
+    expectedDist = MULTINOZZLE_WIDTH + gapDistance  # - 2.6
+
+    # mm, the distance offset with calculated distance and expected one
+    diff_vect = np.array([0, 0, 0])
+
     # Initialize the reference position and expected distance if set to None
     if prevRefPos['pos'] is None:
         # First and second layer treatment
-        if i == 0: # if the start of first layer
-            if adjustOrigin: # Set reference point near origin
+        if i == 0:  # if the start of first layer
+            if adjustOrigin:  # Set reference point near origin
                 if curr_process['id'] == 0:
                     ptClose_offset = - approach_length - layer_change_bleed
                 else:
                     ptClose_offset = - layer_change_bleed
-                    
-                expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2 
-                ptClose, distance, isClosest, uv = getClosest(np.array([start_x + NOZZLE_DIAMETER/2, 
-                                                                     start_y + NOZZLE_DIAMETER/2 + ptClose_offset, 
-                                                                     start_z]),
+
+                expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2
+                ptClose, distance, isClosest, uv = getClosest(np.array([start_x + NOZZLE_DIAMETER/2,
+                                                                        start_y + NOZZLE_DIAMETER/2 + ptClose_offset,
+                                                                        start_z]),
                                                               name,
                                                               normal[1],
                                                               col_check_precision, col_check_step, col_check_stop,
                                                               False)
-            else: # Otherwise, set reference point to ptEval
+            else:  # Otherwise, set reference point to ptEval
                 expectedDist = 0
                 ptClose = ptEval
                 uv = uv_initial
-        elif i == 1: # if the start of second layer
+        elif i == 1:  # if the start of second layer
             # Set reference position to the position at the end corner of the overvall microscaffold network
-            if overallDimRefPos['pos'] is None: 
+            if overallDimRefPos['pos'] is None:
                 raise Exception('overallDimRefPos is None')
             ptClose = overallDimRefPos['pos']
-            expectedDist = layer_change_bleed + (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER)/2 + gapDistance
-        
+            expectedDist = layer_change_bleed + \
+                (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER)/2 + gapDistance
+
         # Special target treatment
-        if name == 'L3R1C1Start1': # if the third layer
+        if name == 'L3R1C1Start1':  # if the third layer
             if adjustOrigin:
-                expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2                     
-                ptClose, distance, isClosest, uv = getClosest(np.array([start_x + NOZZLE_DIAMETER/2, 
-                                                                     start_y + NOZZLE_DIAMETER/2 - layer_change_bleed, 
-                                                                     start_z]),
+                expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2
+                ptClose, distance, isClosest, uv = getClosest(np.array([start_x + NOZZLE_DIAMETER/2,
+                                                                        start_y + NOZZLE_DIAMETER/2 - layer_change_bleed,
+                                                                        start_z]),
                                                               name,
                                                               normal[1],
                                                               col_check_precision, col_check_step, col_check_stop,
@@ -1215,16 +1371,17 @@ def adjustGap(ptEval, uv_initial, normal, i, print_direction, name, special):
                 expectedDist = 0
                 ptClose = ptEval
                 uv = uv_initial
-        
-        elif name == 'Retract': # Special treatment for retraction move at end of print
+
+        elif name == 'Retract':  # Special treatment for retraction move at end of print
             expectedDist = 0
             if i % 2 == 0:
                 ptClose = [overallDimRefPos['pos'][0],
-                           overallDimRefPos['pos'][1] + NOZZLE_DISTANCE / 2 + MULTINOZZLE_WIDTH / 2 + retract_length + layer_change_bleed + NOZZLE_DIAMETER,
+                           overallDimRefPos['pos'][1] + NOZZLE_DISTANCE / 2 + MULTINOZZLE_WIDTH /
+                           2 + retract_length + layer_change_bleed + NOZZLE_DIAMETER,
                            overallDimRefPos['pos'][2]]
-                
+
         prevRefPos['pos'] = ptClose
-    
+
     # Initialization the reference position and expected distance if not set to None
     else:
         # If start of pass on second layer
@@ -1232,9 +1389,9 @@ def adjustGap(ptEval, uv_initial, normal, i, print_direction, name, special):
             if overallDimRefPos['pos'] is None:
                 raise Exception('overallDimRefPos is None')
             ptClose = overallDimRefPos['pos']
-            expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2 
+            expectedDist = (MULTINOZZLE_WIDTH + NOZZLE_DIAMETER) / 2
             prevRefPos['pos'] = ptClose
-            
+
         # If any pass on the second layer
         elif i == 1 and 'pass' in special:
             if lastRef is None:
@@ -1242,64 +1399,65 @@ def adjustGap(ptEval, uv_initial, normal, i, print_direction, name, special):
             ptClose = lastRef
             expectedDist = pass_step_x
             prevRefPos['pos'] = ptClose
-            
-        elif i == 1 and 'CON' in name: 
-            if 'lastPass' in special or 'CON4' in name or 'CON3' in name:                
+
+        elif i == 1 and 'CON' in name:
+            if 'lastPass' in special or 'CON4' in name or 'CON3' in name:
                 if lastRef is None:
                     raise Exception('lastRef is None')
                 ptClose = lastRef
                 expectedDist = printing_bleed
                 prevRefPos['pos'] = ptClose
-    
+
     # for plotting ref points Mayavi
-    wrongPosGap.append(ptEval) # Purple
+    wrongPosGap.append(ptEval)  # Purple
     refPositions.append(prevRefPos['pos'])  # Blue
-       
+
     # Calculate distance from prevRefPos and difference with expected distance
-    dist, dir_vect = distanceP1P2(ptEval,prevRefPos['pos'])  
-    
+    dist, dir_vect = distanceP1P2(ptEval, prevRefPos['pos'])
+
     # Adjustment of the direction vector of layer 2 depending on the printing direction
     # This adjustment prevent singularities which messes up the direction vector
     if i == 1 and 'x' in print_direction:
         dir_vect[1] = 0
     elif i == 1 and 'y' in print_direction:
         dir_vect[0] = 0
-        
+
     diff = dist - expectedDist
-    #print('-------------------\n%s, ref = %s, diff = %.4f' % (name, prevRefPos['pos'], diff))
-    
+    # print('-------------------\n%s, ref = %s, diff = %.4f' % (name, prevRefPos['pos'], diff))
+
     # Vector direction management for layer 2
     if i == 1 and (('CON' in name) or ('pass' in special) or ('lastPass' in special)):
-        if (print_direction == '-x' and ptEval[0] > prevRefPos['pos'][0]) or (print_direction == '+x' and ptEval[0] < prevRefPos['pos'][0]):                  
+        if (print_direction == '-x' and ptEval[0] > prevRefPos['pos'][0]) or (print_direction == '+x' and ptEval[0] < prevRefPos['pos'][0]):
             diff = dist + expectedDist
-            
+
     # Distance condition to move the point
     if abs(diff) > 0 and dir_vect is not None:
         diff_vect = np.array(diff * unit_vector(dir_vect))
-                
+
         # for plotting ref points Mayavi
         vectToPlot = [ptEval, diff_vect]
-                
+
         dirVectors.append(vectToPlot)
-    
+
         to_check = np.array(diff_vect + ptEval)
-        posToCheck.append(to_check) # Beige
+        posToCheck.append(to_check)  # Beige
         if 'Retract' in name and adjust_pore_size != 'None':
-            abortLoop =  True 
+            abortLoop = True
         else:
-            abortLoop =  False
-        ptEval, distance, isClosest, uv = getClosest(to_check, name, normal[1], col_check_precision, col_check_step, col_check_stop, False, abortLoop)
-            
+            abortLoop = False
+        ptEval, distance, isClosest, uv = getClosest(
+            to_check, name, normal[1], col_check_precision, col_check_step, col_check_stop, False, abortLoop)
+
         # for plotting ref points Mayavi
-        newPosGap.append(ptEval) # Green
+        newPosGap.append(ptEval)  # Green
     else:
-        diff_vect = np.array([0,0,0])
+        diff_vect = np.array([0, 0, 0])
         uv = uv_initial
-   
+
     # the last ptEval becomes the new prevRefPos
     prevRefPos['pos'] = ptEval
     prevRefPos['offset'] = diff_vect
-    
+
     return ptEval, uv
 
 # Function addToVisualization
@@ -1311,11 +1469,13 @@ def adjustGap(ptEval, uv_initial, normal, i, print_direction, name, special):
 #   Parameters:
 #       position : list, the cartesian position to process
 #
+
+
 def addToVisualization(position):
     xs.append(position[0])
     ys.append(position[1])
     zs.append(position[2])
-    
+
 # Function generateFilaments
 #
 #   Description: calcualte the multinozzle extruded filaments position on the given toolpath coordinate
@@ -1328,18 +1488,21 @@ def addToVisualization(position):
 #       z : float, z position of the current layer
 #       project_filaments : bool, set tu True to project filaments on the curved surface
 #
-def generateFilaments(tangent, normal, z, project_filaments = False):
+
+
+def generateFilaments(tangent, normal, z, project_filaments=False):
     mltnzl_array_half_width = MULTINOZZLE_TRUE_WIDTH / 2
     nozzle_pos_list = []
-    #listNormal = list(normal)
-    
+    # listNormal = list(normal)
+
     # Filaments projection
-    for nozIndex in range(NB_NOZZLES):        
+    for nozIndex in range(NB_NOZZLES):
         # We multiply the nozzle index with the nozzle distance and substract the starting position
         # to give a position for all nozzles along the tangent
         # nozzle_pos_direction = [i* (nozIndex * NOZZLE_TRUE_DISTANCE - mltnzl_array_half_width) for i in tangent[1]]
-        nozzle_pos_direction = np.multiply([nozIndex * NOZZLE_TRUE_DISTANCE - mltnzl_array_half_width], tangent[1])
-        
+        nozzle_pos_direction = np.multiply(
+            [nozIndex * NOZZLE_TRUE_DISTANCE - mltnzl_array_half_width], tangent[1])
+
         if project_filaments:
             filament_height = z - NOZZLE_DIAMETER/2
             # Projection of the filament of each nozzle on the surface
@@ -1349,19 +1512,20 @@ def generateFilaments(tangent, normal, z, project_filaments = False):
             # y = nozzle_pos[1] - z * listNormal[1][1]
             x = nozzle_pos[0] - filament_height * normal[1][0]
             y = nozzle_pos[1] - filament_height * normal[1][1]
-            #z = nozzle_pos[2]
+            # z = nozzle_pos[2]
             relu, relv, exceedX, exceedY = relativeUVbyXY(x, y)
-    
+
             # The uv list must contain floats value for normal assessment
-            uv = [float(relu),float(relv)]
-    
-            ptEval = surf.evaluate_single(uv)   # Evaluate the point on the surface according to it's relative position on x and y
+            uv = [float(relu), float(relv)]
+
+            # Evaluate the point on the surface according to it's relative position on x and y
+            ptEval = surf.evaluate_single(uv)
             newTangent = operations.tangent(surf, uv, normalize=True)
-            newTangent = [list(nta) for nta in newTangent]     
-            
+            newTangent = [list(nta) for nta in newTangent]
+
             ptEval = assignNewXYZ(x, y, ptEval, exceedX, exceedY, newTangent)
-            #[newX, newY, newZ] = ptEval
-            
+            # [newX, newY, newZ] = ptEval
+
             # dx = NOZZLE_DIAMETER * normal[1][0]
             # dy = NOZZLE_DIAMETER * normal[1][1]
             # dz = NOZZLE_DIAMETER * normal[1][2]
@@ -1369,14 +1533,18 @@ def generateFilaments(tangent, normal, z, project_filaments = False):
             # newX += dx
             # newY += dy
             # newZ += dz
-            
-            nozzle_pos_direction = ptEval + np.multiply(filament_height, normal[1])#np.array([newX,newY,newZ])
+
+            nozzle_pos_direction = ptEval + \
+                np.multiply(filament_height,
+                            normal[1])  # np.array([newX,newY,newZ])
         else:
-            nozzle_pos_direction = np.array(nozzle_pos_direction) + np.array(tangent[0]) - np.multiply(NOZZLE_DIAMETER/2, normal[1])
-        
-        nozzle_pos = nozzle_pos_direction#tuple(np.array(nozzle_pos_direction) + np.array(tangent[0]))
+            nozzle_pos_direction = np.array(
+                nozzle_pos_direction) + np.array(tangent[0]) - np.multiply(NOZZLE_DIAMETER/2, normal[1])
+
+        # tuple(np.array(nozzle_pos_direction) + np.array(tangent[0]))
+        nozzle_pos = nozzle_pos_direction
         nozzle_pos_list.append(nozzle_pos)
-    
+
     nozzle_pos_tupple = nozzle_pos_list
     nozzles_locations.append(nozzle_pos_tupple)
 
@@ -1393,12 +1561,14 @@ def generateFilaments(tangent, normal, z, project_filaments = False):
 #       x : float, the coordinate x value of the position to process
 #       y : float, the coordinate y value of the position to process
 #
-def relativeUVbyXY(x,y):
+
+
+def relativeUVbyXY(x, y):
     # min and max x and y components of the surface
-    minX = surf.evaluate_single([0,0])[0]
-    minY = surf.evaluate_single([0,0])[1]
-    maxX = surf.evaluate_single([1,1])[0]
-    maxY = surf.evaluate_single([1,1])[1]
+    minX = surf.evaluate_single([0, 0])[0]
+    minY = surf.evaluate_single([0, 0])[1]
+    maxX = surf.evaluate_single([1, 1])[0]
+    maxY = surf.evaluate_single([1, 1])[1]
     # minX = surf.bbox[0][0]
     # minY = surf.bbox[0][1]
     # maxX = surf.bbox[1][0]
@@ -1424,7 +1594,7 @@ def relativeUVbyXY(x,y):
     elif relv > 1:
         relv = 1
         exceedY = True
-    #print('relu = %.4f, exceedX = %s\n' % (relu,str(exceedX)))
+    # print('relu = %.4f, exceedX = %s\n' % (relu,str(exceedX)))
 
     return relu, relv, exceedX, exceedY
 
@@ -1445,11 +1615,13 @@ def relativeUVbyXY(x,y):
 #       targetName : string, the coordinate name (includes layer, row, column indexes)
 #       debug : bool, flag to prevent calling the RoboDK API
 #
-def checkCollision(pos, tangent, normal, targetName, debug = True):
+
+
+def checkCollision(pos, tangent, normal, targetName, debug=True):
     # Calculation of the nozzles array footprint vector
     mltnzl_limits = MULTINOZZLE_TRUE_WIDTH + NOZZLE_DIAMETER
     mltnzl_footprint = getMultinozzleFootprint(tangent, mltnzl_limits)
-    
+
     # Retrieving the relative u and relative v to evaluate the surface according to the relative position of X and Y over the surface
     check_mltnzl_limits = []
     offsets = []
@@ -1457,14 +1629,18 @@ def checkCollision(pos, tangent, normal, targetName, debug = True):
     for to_check in mltnzl_footprint:
         # Run a brute-force algorithm to find the neareste point on the surface
         if debug:
-            print('\nTesting collision on [%.3f, %.3f, %.3f]...' % (to_check[0], to_check[1], to_check[2]))
-        ptEval, distance, isClosest, uv = getClosest(to_check, targetName, normal[1], col_check_precision, col_check_step, col_check_stop, debug, True)
+            print('\nTesting collision on [%.3f, %.3f, %.3f]...' % (
+                to_check[0], to_check[1], to_check[2]))
+        ptEval, distance, isClosest, uv = getClosest(
+            to_check, targetName, normal[1], col_check_precision, col_check_step, col_check_stop, debug, True)
 
         is_collision = to_check[2] <= ptEval[2] and isClosest
         if is_collision:
-            check_mltnzl_limits.append(is_collision) # Add the collision to the check list (one of the nozzle array end)
-            #collisions_coords.append(list(to_check))  # Add the problematic nozzle array end coordinate to plot collection
-            collisions_coords.append(ptEval)  # Add the surface location where the collision happened to plot collection
+            # Add the collision to the check list (one of the nozzle array end)
+            check_mltnzl_limits.append(is_collision)
+            # collisions_coords.append(list(to_check))  # Add the problematic nozzle array end coordinate to plot collection
+            # Add the surface location where the collision happened to plot collection
+            collisions_coords.append(ptEval)
 
             if debug:
                 print('\t\t...distance UNDER surface = %.3f mm' % distance)
@@ -1496,7 +1672,8 @@ def checkCollision(pos, tangent, normal, targetName, debug = True):
             deposition_clearance = NOZZLE_DIAMETER
 
         shift_distance = worst_distance + deposition_clearance
-        col_offsets[''.join([targetName, '_process', str(curr_process['id'])])] = shift_distance
+        col_offsets[''.join([targetName, '_process', str(
+            curr_process['id'])])] = shift_distance
 
     # Otherwise, no collision, we don't change the position
     else:
@@ -1519,7 +1696,8 @@ def checkCollision(pos, tangent, normal, targetName, debug = True):
         # Check is distance (positive) is smaller than the clearance required
         if worst_distance < deposition_clearance:
             shift_distance = deposition_clearance - worst_distance
-            col_offsets[''.join([targetName, '_process', str(curr_process['id'])])] = shift_distance
+            col_offsets[''.join([targetName, '_process', str(
+                curr_process['id'])])] = shift_distance
         else:
             shift_distance = 0
 
@@ -1542,7 +1720,7 @@ def checkCollision(pos, tangent, normal, targetName, debug = True):
 
 # Function getMultinozzleFootprint
 #
-#   Description: given a coordinate in space and the limit dimension of the multinozzle, 
+#   Description: given a coordinate in space and the limit dimension of the multinozzle,
 #                   the function returns the tupple coordinate of the multinozzle footprint.
 #
 #   Returns:
@@ -1552,23 +1730,25 @@ def checkCollision(pos, tangent, normal, targetName, debug = True):
 #   Parameters:
 #       mltnzl_footprint : tupple, coordinate of the multinozzle footprint (in 3D space)
 #
+
+
 def getMultinozzleFootprint(tangent, mltnzl_limits):
     # For v1 and v2, we multiply each xyz component of the tangent by the half length of the multinozzle limit dimensions
     v1 = [i*mltnzl_limits/2 for i in tangent[1]]
     v2 = [i*-1*mltnzl_limits/2 for i in tangent[1]]
-    
+
     # p1 and p2 are the coordinates of the end of vectors v1 and v2, representation the location of the nozzle array in space
-    p1 = (np.array(v1) + np.array(tangent[0]))     
+    p1 = (np.array(v1) + np.array(tangent[0]))
     p2 = (np.array(v2) + np.array(tangent[0]))
-    
+
     # The "footprint" is the collection of both end coordinates in space of the multinozzle array
-    mltnzl_footprint = [p1,p2]
-    
+    mltnzl_footprint = [p1, p2]
+
     return mltnzl_footprint
 
 # Function getClosest
 #
-#   Description: given a coordinate in space, the function iteratively searches 
+#   Description: given a coordinate in space, the function iteratively searches
 #                for the closest coordinated on the NURBS.
 #                The algorithm starts by looking at the closest point using the function
 #                relativeUVbyXY. Then, the vector between the found point is projected
@@ -1590,24 +1770,26 @@ def getMultinozzleFootprint(tangent, mltnzl_limits):
 #       debug : bool, flag to prevent calling the RoboDK API
 #       abort_if_out : bool, flag to abort the function if the point is outside the surface bounds
 #
-def getClosest(target_pt, name, normal, precision, step, stop, debug = True, abort_if_out = False):
+
+
+def getClosest(target_pt, name, normal, precision, step, stop, debug=True, abort_if_out=False):
     isClosest = False
     # get a first point on the surface using the target coordinate x, y
     x = target_pt[0]
     y = target_pt[1]
     relu, relv, exceedX, exceedY = relativeUVbyXY(x, y)
-    uv = [float(relu),float(relv)]
+    uv = [float(relu), float(relv)]
     ptEval = surf.evaluate_single(uv)
-    
+
     # Finding the tangents at the evaluated point
     tangent = operations.tangent(surf, uv, normalize=True)
     tangent = [list(ta) for ta in tangent]
-    ptEval = assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent) 
-    
+    ptEval = assignNewXYZ(x, y, ptEval, exceedX, exceedY, tangent)
+
     # Abort if outside bounds
     if abort_if_out and (exceedX or exceedY):
         return (ptEval, 0, False, uv)
-    
+
     # Initialize the coordinate that will make ptEval move closer to the target x, y
     nextX = x
     nextY = y
@@ -1626,7 +1808,7 @@ def getClosest(target_pt, name, normal, precision, step, stop, debug = True, abo
     #     uv = [float(relu),float(relv)]
     #     ptEval = surf.evaluate_single(uv)
     #     tangent = operations.tangent(surf, uv, normalize=True)
-    #     ptEval = assignNewXYZ(nextX, nextX, ptEval, exceedX, exceedY, tangent) 
+    #     ptEval = assignNewXYZ(nextX, nextX, ptEval, exceedX, exceedY, tangent)
     #     dx = ptEval[0] - x
 
     # # Reduce the distance in the Y axis
@@ -1643,57 +1825,72 @@ def getClosest(target_pt, name, normal, precision, step, stop, debug = True, abo
     #     uv = [float(relu),float(relv)]
     #     ptEval = surf.evaluate_single(uv)
     #     tangent = operations.tangent(surf, uv, normalize=True)
-    #     ptEval = assignNewXYZ(nextX, nextY, ptEval, exceedX, exceedY, tangent) 
+    #     ptEval = assignNewXYZ(nextX, nextY, ptEval, exceedX, exceedY, tangent)
     #     dy = ptEval[1] - y
-    
+
     dx = np.subtract(ptEval[0], x)
     cptx = 0
     dy = np.subtract(ptEval[1], y)
     cpty = 0
-    while abs(dx) > precision or abs(dy) > precision: # dx magnitude is greater than precision. the point is not found on x.
-        #print('relu = %.4f, exceedX = %s\n' % (relu,str(exceedX)))
-        #print('----------------------')
+    # dx magnitude is greater than precision. the point is not found on x.
+    while abs(dx) > precision or abs(dy) > precision:
+        # print('relu = %.4f, exceedX = %s\n' % (relu,str(exceedX)))
+        # print('----------------------')
         if abort_if_out and (exceedX or exceedY):
-            #print('Aborted')
+            # print('Aborted')
             return (ptEval, 0, False, uv)
-        
-        #print('dx = %.4f, dy = %.4f\n' % (dx, dy))
+
+        # print('dx = %.4f, dy = %.4f\n' % (dx, dy))
         if abs(dx) > precision:
-            if abs(dx) < step: print('\nWARNING: step on X is bigger than dx')
-            if cptx >= stop: 
-                raise Exception('The closest point convergence was not found after %i iteration on X for %s' % (cptx, name))
-                #return (ptEval, 0, False, uv)
-            
-            #cptx += 1
-            cptx = np.sum([cptx,1])
-            
+            if abs(dx) < step:
+                print('\nWARNING: step on X is bigger than dx')
+            if cptx >= stop:
+                raise Exception(
+                    'The closest point convergence was not found after %i iteration on X for %s' % (cptx, name))
+                # return (ptEval, 0, False, uv)
+
+            # cptx += 1
+            cptx = np.sum([cptx, 1])
+
             # if dx < 0: nextX += step # dx negative, ptEval[0] is smaller than x
             # if dx > 0: nextX -= step # dx positive, ptEval[0] is greater than x
-            if dx < 0: nextX = np.sum([nextX,step]) # dx negative, ptEval[0] is smaller than x
-            if dx > 0: nextX = np.subtract(nextX,step) # dx positive, ptEval[0] is greater than x
-            
+            if dx < 0:
+                # dx negative, ptEval[0] is smaller than x
+                nextX = np.sum([nextX, step])
+            if dx > 0:
+                # dx positive, ptEval[0] is greater than x
+                nextX = np.subtract(nextX, step)
+
         if abs(dy) > precision:
-            if abs(dy) < step: print('\nWARNING: step on Y is bigger than dy')
-            if cpty >= stop: 
-                raise Exception('The closest point convergence was not found after %i iteration on Y for %s' % (cptx, name))
-                #return (ptEval, 0, False, uv)
-            
-            #cpty += 1
-            cpty = np.sum([cpty,1])
- 
-            if dy < 0: nextY = np.sum([nextY,step]) # dy negative, ptEval[1] is smaller than y
-            if dy > 0: nextY = np.subtract(nextY,step) # dy positive, ptEval[1] is greater than y
-        
+            if abs(dy) < step:
+                print('\nWARNING: step on Y is bigger than dy')
+            if cpty >= stop:
+                raise Exception(
+                    'The closest point convergence was not found after %i iteration on Y for %s' % (cptx, name))
+                # return (ptEval, 0, False, uv)
+
+            # cpty += 1
+            cpty = np.sum([cpty, 1])
+
+            if dy < 0:
+                # dy negative, ptEval[1] is smaller than y
+                nextY = np.sum([nextY, step])
+            if dy > 0:
+                # dy positive, ptEval[1] is greater than y
+                nextY = np.subtract(nextY, step)
+
         relu, relv, exceedX, exceedY = relativeUVbyXY(nextX, nextY)
-        uv = [float(relu),float(relv)]
+        uv = [float(relu), float(relv)]
         ptEval = surf.evaluate_single(uv)
         tangent = operations.tangent(surf, uv, normalize=True)
         tangent = [list(ta) for ta in tangent]
-        ptEval = assignNewXYZ(nextX, nextX, ptEval, exceedX, exceedY, tangent) 
-                
-        if abs(dx) > precision: dx = np.subtract(ptEval[0], x)
-        if abs(dy) > precision: dy = np.subtract(ptEval[1], y)
-        #print('dx = %3f, dy = %.3f\n' % (dx, dy))
+        ptEval = assignNewXYZ(nextX, nextX, ptEval, exceedX, exceedY, tangent)
+
+        if abs(dx) > precision:
+            dx = np.subtract(ptEval[0], x)
+        if abs(dy) > precision:
+            dy = np.subtract(ptEval[1], y)
+        # print('dx = %3f, dy = %.3f\n' % (dx, dy))
 
     # if exceedX:
     #     # raise Exception('The closest found point u-component is outside its boundary (relu = %.4f)' % relu)
@@ -1703,11 +1900,12 @@ def getClosest(target_pt, name, normal, precision, step, stop, debug = True, abo
     #     print('The closest found point v-component is outside its boundary (relu = %.2f, relv = %.2f)' % (relu,relv))
 
     if debug:
-        print('\tConvergence was met after iteration # %i for %s' % (cptx + cpty, name))
+        print('\tConvergence was met after iteration # %i for %s' %
+              (cptx + cpty, name))
 
     # Projection of the vector on the normal to get an approximation of the closest point on the surface following the normal
     vector_normal = np.array(normal)
-    #vector_target_eval = np.array(ptEval) - np.array(target_pt)
+    # vector_target_eval = np.array(ptEval) - np.array(target_pt)
     vector_target_eval = np.subtract(np.array(ptEval), np.array(target_pt))
     vector_proj = projectVector(vector_target_eval, vector_normal)
     dist = np.linalg.norm(vector_proj)
@@ -1733,6 +1931,8 @@ def getClosest(target_pt, name, normal, precision, step, stop, debug = True, abo
 #       direct_tangent :tuple, the tangent vector of the triad directed in the printing direction
 #       newXYZ : list, x y and z component of the 3D translation in space
 #
+
+
 def updatePosTriad(normal, perp_tangent, direct_tangent, newXYZ):
     # newX = newXYZ[0]
     # newY = newXYZ[1]
@@ -1762,8 +1962,8 @@ def updatePosTriad(normal, perp_tangent, direct_tangent, newXYZ):
 
 # Function updatePosTriad
 #
-#   Description: Update the rotation around the normal of the triad to 
-#                produce the desired pore size (rotation of multinozzle 
+#   Description: Update the rotation around the normal of the triad to
+#                produce the desired pore size (rotation of multinozzle
 #                around its axis)
 #
 #   Returns:
@@ -1777,6 +1977,8 @@ def updatePosTriad(normal, perp_tangent, direct_tangent, newXYZ):
 #       direct_tangent : tuple, the tangent vector of the triad directed in the printing direction
 #       angle : float, the angle value at which to rotate the triad around the normal vector
 #
+
+
 def updateRotTriad(normal, perp_tangent, direct_tangent, angle):
     # Obtain the Normal and Tangents conversion between tuples and lists before calculating the rotation matrix
     # listNormal = list(normal)
@@ -1785,7 +1987,7 @@ def updateRotTriad(normal, perp_tangent, direct_tangent, angle):
     # tempTriad = np.matrix([[listTangent[1][0], listTangent[1][1], listTangent[1][2]],
     #                        [listPerpTangent[1][0], listPerpTangent[1][1], listPerpTangent[1][2]],
     #                        [listNormal[1][0], listNormal[1][1], listNormal[1][2]]])
-    
+
     tempTriad = np.matrix([direct_tangent[1], perp_tangent[1], normal[1]])
 
     # Get the rotation matrix for the temporary triad of normal and tangents
@@ -1794,7 +1996,7 @@ def updateRotTriad(normal, perp_tangent, direct_tangent, angle):
     # Turn the triad around the global Z axis by an angle using the rotation matrix
     if debug:
         direction = -1
-    else: # for RoboDK
+    else:  # for RoboDK
         direction = 1
     tempTriad = rotAroundNormal(tempTriad, rotMat, direction * angle)
 
@@ -1809,7 +2011,7 @@ def updateRotTriad(normal, perp_tangent, direct_tangent, angle):
     direct_tangent[1] = tempTriad.tolist()[0]
     perp_tangent[1] = tempTriad.tolist()[1]
     normal[1] = tempTriad.tolist()[2]
-    
+
     return normal[:], perp_tangent[:], direct_tangent[:]
 
 
@@ -1825,10 +2027,10 @@ if not os.path.exists(meshFolder):
     os.makedirs(meshFolder)
 
 # Gather all available mesh files from the mesh folder
-files = [];
+files = []
 for file in glob.glob(meshFolder + "*.json")+glob.glob(meshFolder + "*.stl"):
     files.append(file[len(meshFolder):])
-files.insert(0,'None')
+files.insert(0, 'None')
 files.append(0)
 
 # Check if pref and project parameter files folder exists or create new one
@@ -1838,7 +2040,7 @@ if not os.path.exists(prefFolder):
 if not os.path.exists(projectFolder):
     print('Creating %s directory...' % projectFolder)
     os.makedirs(projectFolder)
-    
+
 # Check if export folder exists or create new one
 if not os.path.exists(exportFolder):
     print('Creating %s directory...' % exportFolder)
@@ -1848,7 +2050,7 @@ if not os.path.exists(exportFolder):
 projectList = []
 for project in glob.glob(projectFolder + "*.json"):
     projectList.append(project[len(projectFolder):])
-projectList.insert(0,'New project')
+projectList.insert(0, 'New project')
 projectList.append(0)
 
 # user input window -----------------------------------------------------------
@@ -1856,7 +2058,7 @@ projectList.append(0)
 title = scriptname
 # instructions = 'Welcome to Multinozzle Toolpath Generator (MTG) ! Please input the following parameters for toolpath generation of a multinozzle manufactured microscaffold network :'
 windowWidth = 1400
-windowHeight= 700
+windowHeight = 700
 fields = [
     'Fanuc travel speed (mm/s)',
     'Fanuc printing speed (mm/s)',
@@ -1907,14 +2109,14 @@ fields = [
     'Debug mode (outside of RDK)',
     'Export stats',
     'Export expected geometry'
-    ]
+]
 
 # Column creation
 #
-#   To create column, simply have as much column names as the number of 
+#   To create column, simply have as much column names as the number of
 #   "columnX" collection object (where X is the column id)
 #
-columnNames = ['Robot parameters', 'Print geometry','Other options']
+columnNames = ['Robot parameters', 'Print geometry', 'Other options']
 
 # Column 1 : Robot parameters
 column1 = [travel_speed,
@@ -1981,76 +2183,86 @@ while True:
             # Loading dict from the json file
             last_params_dict = json.load(infile)
             defaultVal = last_params_dict
-    
+
             # Force the files list of projection surface to take the values of the glob search and not the last saved parameters
-            last_chosen = min(defaultVal['Projection surface'][-1], len(files)-2)
+            last_chosen = min(
+                defaultVal['Projection surface'][-1], len(files)-2)
             files[-1] = last_chosen
             defaultVal['Projection surface'] = files
 
             # Re convert the dictionnary back to a list
             defaultVal = list(defaultVal.values())
-    
+
             # Application specific. Reorder the default values in predetermined columns
             idx1 = len(column1)
             idx2 = len(column1)+len(column2)
             idx3 = len(column1)+len(column2)+len(column3)
-            defaultVal = [defaultVal[0:idx1], defaultVal[idx1:idx2], defaultVal[idx2:idx3]]
-    
-        print('Importing printing parameters ' + projectFolder + last_params_file)
+            defaultVal = [defaultVal[0:idx1],
+                          defaultVal[idx1:idx2], defaultVal[idx2:idx3]]
+
+        print('Importing printing parameters ' +
+              projectFolder + last_params_file)
         if last_params_file == 'mltnzl_last_params.json':
             print('\n =============== WARNING ! ===============\nYou are automatically loading a legacy project. Delete "%s\mltnzl_last_params.json" to be able to load other projects.\n' % (projectFolder))
         break
     except:
-        print('Could not import printing parameters ' + projectFolder + last_params_file)
-        
+        print('Could not import printing parameters ' +
+              projectFolder + last_params_file)
+
         # MTG project loading startup window
         titleStartup = 'Starting MTG...'
         instructionsStartup = 'Choose a printing parameter file for existing project or create a new one : '
         fieldsStartup = ['Load file', 'Save as (if new)']
-        
+
         # Try to load the last parameters from a given json file which corresponds a projectd
         try:
             with open(prefFolder + last_startup_params_file) as infile:
                 # Loading dict from the json file
                 last_startup_dict = json.load(infile)
                 defaultStartupParams = last_startup_dict
-                
+
                 # Force the projectList list of project parameters to take the values of the glob search and not the last saved parameters
-                last_chosen_project = min(defaultStartupParams['Load file'][-1], len(projectList)-2)
+                last_chosen_project = min(
+                    defaultStartupParams['Load file'][-1], len(projectList)-2)
                 projectList[-1] = last_chosen_project
                 defaultStartupParams['Load file'] = projectList
 
                 # Re convert the dictionnary back to a list
                 defaultStartupParams = list(defaultStartupParams.values())
-    
-            print('Importing startup parameters ' + prefFolder + last_startup_params_file)
+
+            print('Importing startup parameters ' +
+                  prefFolder + last_startup_params_file)
         except:
-            print('Could not import startup parameters ' + prefFolder + last_startup_params_file)
-        
+            print('Could not import startup parameters ' +
+                  prefFolder + last_startup_params_file)
+
             defaultStartupParams = [projectList, '']
-            
+
         # Creationg of the startup window instance
         startupWindowWidth = 400
-        startupWindowHeight= 215
+        startupWindowHeight = 215
         print('Waiting for user input...')
-        startupWindow = inputWindow.inputWindow(titleStartup, instructionsStartup, startupWindowWidth, startupWindowHeight, fieldsStartup, defaultStartupParams)
-    
+        startupWindow = inputWindow.inputWindow(
+            titleStartup, instructionsStartup, startupWindowWidth, startupWindowHeight, fieldsStartup, defaultStartupParams)
+
         if startupWindow.values:
-            #Writing json file
-            startupWindow.export_json(prefFolder + last_startup_params_file, defaultStartupParams)
+            # Writing json file
+            startupWindow.export_json(
+                prefFolder + last_startup_params_file, defaultStartupParams)
             [loadFile, saveAs] = startupWindow.values
-    
+
             # Default name if empty
             if saveAs == '':
-                saveAs = 'new_project_'+ dt.now().strftime("%d-%m-%y") + '_' + dt.now().strftime("%H%M%S") +'.json'
-                
+                saveAs = 'new_project_' + dt.now().strftime("%d-%m-%y") + '_' + \
+                    dt.now().strftime("%H%M%S") + '.json'
+
             # Add file extension if missing
             if saveAs.find('.json') == -1:
                 saveAs = saveAs + '.json'
         else:
             msg = 'User canceled'
             raise Exception(msg)
-    
+
         if loadFile == 'New project':
             # If user choose "new project", we exit the while loop and choose the defaults params
             last_params_file = saveAs
@@ -2059,85 +2271,91 @@ while True:
             break
         else:
             last_params_file = loadFile
-            print('Loading project printing parameters : %s...\n' % last_params_file)
+            print('Loading project printing parameters : %s...\n' %
+                  last_params_file)
 
 # Console feedback
-instructions = 'Welcome to Multinozzle Toolpath Generator (MTG) !\n\n   Open project : '+ last_params_file +'\n   Please set the process parameters for toolpath generation of a microscaffold network :'
+instructions = 'Welcome to Multinozzle Toolpath Generator (MTG) !\n\n   Open project : ' + last_params_file + \
+    '\n   Please set the process parameters for toolpath generation of a microscaffold network :'
 print('Waiting for user input...')
-myWindow = inputWindow.inputWindow(title, instructions, windowWidth, windowHeight, fields, defaultVal, logo, False, columnNames)
+myWindow = inputWindow.inputWindow(
+    title, instructions, windowWidth, windowHeight, fields, defaultVal, logo, False, columnNames)
 
 # Obtaining the input window values -----------------------------------------------------
 if myWindow.values:
-    #Writing json file
+    # Writing json file
     myWindow.export_json(projectFolder + last_params_file, defaultVal)
 
     # Data assignment. All variables start as a string.
     [travel_speed,
-    scaff_speed,
-    rot_speed,
-    reg_travel_speed,
-    reg_scaff_speed,
-    reg_rot_speed,
-    scaff_extr_speed,
-    MLTNZL_CONFIG,
-    MATERIAL_CHOICE,
-    RESERVOIR_TYPE,
-    pressure_buildup_time,
-    pressure_buildup_z,
-    pressure_retract_time,
-    pressure_retract_dip,
-    stopAndGo,
-    start_x,
-    start_y,
-    start_z,
-    center_print,
-    nb_layers,
-    nb_rows,
-    nb_cols,
-    layer_height_fraction,
-    layer_xy_offset,
-    layer_change_clearance,
-    layer_change_bleed_nominal,
-    layer_change_bleed_clearance,
-    printing_bleed_nominal,
-    approach_length,
-    retract_length,
-    segments_per_scaffold,
-    wall_distance_nominal,
-    pore_size_nominal,
-    thickness_nominal,
-    proj_file,
-    compensateDeformation,
-    adjustOrigin,
-    check_col,
-    adjust_pore_size,
-    show_targets,
-    show_plot,
-    plotType,
-    show_labels,
-    show_geom,
-    show_toolpath,
-    show_triad,
-    debug,
-    export_stats,
-    exportPrintGeometry] = myWindow.values
+     scaff_speed,
+     rot_speed,
+     reg_travel_speed,
+     reg_scaff_speed,
+     reg_rot_speed,
+     scaff_extr_speed,
+     MLTNZL_CONFIG,
+     MATERIAL_CHOICE,
+     RESERVOIR_TYPE,
+     pressure_buildup_time,
+     pressure_buildup_z,
+     pressure_retract_time,
+     pressure_retract_dip,
+     stopAndGo,
+     start_x,
+     start_y,
+     start_z,
+     center_print,
+     nb_layers,
+     nb_rows,
+     nb_cols,
+     layer_height_fraction,
+     layer_xy_offset,
+     layer_change_clearance,
+     layer_change_bleed_nominal,
+     layer_change_bleed_clearance,
+     printing_bleed_nominal,
+     approach_length,
+     retract_length,
+     segments_per_scaffold,
+     wall_distance_nominal,
+     pore_size_nominal,
+     thickness_nominal,
+     proj_file,
+     compensateDeformation,
+     adjustOrigin,
+     check_col,
+     adjust_pore_size,
+     show_targets,
+     show_plot,
+     plotType,
+     show_labels,
+     show_geom,
+     show_toolpath,
+     show_triad,
+     debug,
+     export_stats,
+     exportPrintGeometry] = myWindow.values
 
     # Data type conversion for the rest of the script. Variable specific.
     travel_speed = int(travel_speed)
     scaff_speed = int(scaff_speed)
     rot_speed = int(rot_speed)
-    pressure_buildup_time = float(pressure_buildup_time)*1000 # conversion to ms
+    pressure_buildup_time = float(
+        pressure_buildup_time)*1000  # conversion to ms
     pressure_buildup_z = float(pressure_buildup_z)
-    pressure_retract_time = float(pressure_retract_time)*1000 # conversion to ms
+    pressure_retract_time = float(
+        pressure_retract_time)*1000  # conversion to ms
     pressure_retract_dip = float(pressure_retract_dip)
-    layer_height_fraction = float(layer_height_fraction)/100 # conversion ratio to scale from 0 to 1
+    # conversion ratio to scale from 0 to 1
+    layer_height_fraction = float(layer_height_fraction)/100
     layer_xy_offset = float(layer_xy_offset)
     start_x = float(start_x)
     start_y = float(start_y)
     start_z = float(start_z)
-    #layer_change_bleed = float(layer_change_bleed)
+    # layer_change_bleed = float(layer_change_bleed)
     layer_change_clearance = float(layer_change_clearance)
-    #printing_bleed = float(printing_bleed)
+    # printing_bleed = float(printing_bleed)
     layer_change_bleed_clearance = float(layer_change_bleed_clearance)
     approach_length = float(approach_length)
     retract_length = float(retract_length)
@@ -2149,21 +2367,24 @@ if myWindow.values:
     adjustOrigin = adjustOrigin == 'True'
     stopAndGo = stopAndGo == 'True'
     check_col = check_col == 'True'
-    #adjust_pore_size = adjust_pore_size == 'True'
+    # adjust_pore_size = adjust_pore_size == 'True'
     show_targets = show_targets == 'True'
     show_plot = show_plot == 'True'
     show_labels = show_labels == 'True'
-    show_geom = show_geom =='True'
+    show_geom = show_geom == 'True'
     show_toolpath = show_toolpath == 'True'
     show_triad = show_triad == 'True'
     debug = debug == 'True'
     export_stats = export_stats == 'True'
     exportPrintGeometry = exportPrintGeometry == 'True'
-    
+
     # different process parameters
-    layer_change_bleed_nominal = [float(i) for i in layer_change_bleed_nominal.split(',')]
-    printing_bleed_nominal = [float(i) for i in printing_bleed_nominal.split(',')]
-    wall_distance_nominal = [float(i) for i in wall_distance_nominal.split(',')]
+    layer_change_bleed_nominal = [
+        float(i) for i in layer_change_bleed_nominal.split(',')]
+    printing_bleed_nominal = [float(i)
+                              for i in printing_bleed_nominal.split(',')]
+    wall_distance_nominal = [float(i)
+                             for i in wall_distance_nominal.split(',')]
     pore_size_nominal = [float(i) for i in pore_size_nominal.split(',')]
     thickness_nominal = [float(i) for i in thickness_nominal.split(',')]
 
@@ -2171,25 +2392,27 @@ if myWindow.values:
 if myWindow.values:
     # Check if either row or col is an even value
     if nb_rows % 2 == 0 or nb_cols % 2 == 0:
-        raise Exception('Toolpath error : the number of rows and columns must be and odd number.\n')
-        
+        raise Exception(
+            'Toolpath error : the number of rows and columns must be and odd number.\n')
+
     # Auto-adjust wall_distance list to pore_size_nominal list
     if len(wall_distance_nominal) == 1 and wall_distance_nominal[0] == 0:
         wall_distance_nominal = list(np.zeros(len(pore_size_nominal)))
-        
+
     # if len(wall_distance_nominal) < len(pore_size_nominal):
     #     wall_distance_nominal = wall_distance_nominal
-        
+
     # Check if wall_distance, pore_size_nominal and thickness_nominal have same length
     if not len(wall_distance_nominal) == len(pore_size_nominal) and not len(pore_size_nominal) == len(thickness_nominal):
-        raise Exception('Printing parameters error : the length for wall_distance, pore_size and thickness must all be equal.\n')
-    
+        raise Exception(
+            'Printing parameters error : the length for wall_distance, pore_size and thickness must all be equal.\n')
+
     # Multinozzle configuration parameters
     for config in MLTNZL_CONFIGS:
         if MLTNZL_CONFIG == config['name']:
             MLTNZL_CONFIG = config
     print('Using "%s" mutlinozzle configuration' % MLTNZL_CONFIG['name'])
-    
+
     # Material choice parameters
     for mat in MATERIALS:
         if MATERIAL_CHOICE == mat['name']:
@@ -2198,34 +2421,43 @@ if myWindow.values:
     print('Using "%s" material' % MATERIAL_CHOICE['name'])
 
     # Initialization of the multinozzle parameters
-    NB_NOZZLES = MLTNZL_CONFIG['nb']            # Number of nozzles. Also, width of the deposition in mm
+    # Number of nozzles. Also, width of the deposition in mm
+    NB_NOZZLES = MLTNZL_CONFIG['nb']
     NOZZLE_DIAMETER = MLTNZL_CONFIG['d']        # mm, default nozzle diameter
-    NOZZLE_TRUE_DISTANCE = MLTNZL_CONFIG['s']   # mm, distance between the center of each nozzle (is the real, unchanged, physical width)
-    NOZZLE_DISTANCE = MLTNZL_CONFIG['s']        # mm, distance between the center of each nozzle (will vary depending on the multinozzle rotation around its axis)
-    MULTINOZZLE_TRUE_WIDTH = (NB_NOZZLES - 1) * NOZZLE_TRUE_DISTANCE    # mm, width of the multinozzle nozzles array (is the real, unchanged, physical width)
-    MULTINOZZLE_WIDTH = (NB_NOZZLES - 1) * NOZZLE_DISTANCE              # mm, width of the multinozzle nozzles array (will vary depending on the multinozzle rotation around its axis)
+    # mm, distance between the center of each nozzle (is the real, unchanged, physical width)
+    NOZZLE_TRUE_DISTANCE = MLTNZL_CONFIG['s']
+    # mm, distance between the center of each nozzle (will vary depending on the multinozzle rotation around its axis)
+    NOZZLE_DISTANCE = MLTNZL_CONFIG['s']
+    # mm, width of the multinozzle nozzles array (is the real, unchanged, physical width)
+    MULTINOZZLE_TRUE_WIDTH = (NB_NOZZLES - 1) * NOZZLE_TRUE_DISTANCE
+    # mm, width of the multinozzle nozzles array (will vary depending on the multinozzle rotation around its axis)
+    MULTINOZZLE_WIDTH = (NB_NOZZLES - 1) * NOZZLE_DISTANCE
     NOZZLE_AREA = pi * (NOZZLE_DIAMETER / 2)**2
-   
+
     # Nominal layer_change_bleeding parameter
     if len(layer_change_bleed_nominal) < len(thickness_nominal):
-        layer_change_bleed_nominal = list(np.multiply(layer_change_bleed_nominal[0], np.ones(len(thickness_nominal))))
+        layer_change_bleed_nominal = list(np.multiply(
+            layer_change_bleed_nominal[0], np.ones(len(thickness_nominal))))
     layer_change_bleed = layer_change_bleed_nominal[0]
-    
+
     # Nominal printing_bleed parameter
     if len(printing_bleed_nominal) < len(thickness_nominal):
-        printing_bleed_nominal = list(np.multiply(printing_bleed_nominal[0], np.ones(len(thickness_nominal))))
+        printing_bleed_nominal = list(np.multiply(
+            printing_bleed_nominal[0], np.ones(len(thickness_nominal))))
     printing_bleed = printing_bleed_nominal[0]
-   
+
     # Check if wall_distance is greater than the nozzle distance
     for wall in wall_distance_nominal:
         if wall > NOZZLE_DISTANCE:
-            print('\nWARNING: wall distance (%.1f) is greater than Nozzle distance (%.1f).' % (wall, NOZZLE_DISTANCE))
-    
+            print('\nWARNING: wall distance (%.1f) is greater than Nozzle distance (%.1f).' % (
+                wall, NOZZLE_DISTANCE))
+
     # Check if walls are compatible with pore size
     for i in range(len(pore_size_nominal)):
         if pore_size_nominal[i] < NOZZLE_TRUE_DISTANCE - NOZZLE_DIAMETER and wall_distance_nominal[i] > 0:
             # Pore size is reduced = multinozzle rotates = walls are incompatible
-            print('\nWARNING: wall_distance = %.2f is not compatible with p = %.3f mm. wall_distance is set to 0.' % (wall_distance_nominal[i], pore_size_nominal[i]))
+            print('\nWARNING: wall_distance = %.2f is not compatible with p = %.3f mm. wall_distance is set to 0.' % (
+                wall_distance_nominal[i], pore_size_nominal[i]))
             wall_distance_nominal[i] = 0
     wall_distance = wall_distance_nominal[0]
 
@@ -2242,16 +2474,18 @@ if myWindow.values:
         elif pore_size_nominal[i] > (NOZZLE_TRUE_DISTANCE - NOZZLE_DIAMETER):
             pore_size_nominal[i] = (NOZZLE_TRUE_DISTANCE - NOZZLE_DIAMETER)
     curr_pore_size = pore_size_nominal[0]
-    
+
     # Initialize last pore size and wall distance values
     last_pore_size = pore_size_nominal[0]
     last_wall_distance = wall_distance_nominal[0]
-    
+
     # Calculation of the required printhead rotation and new apparent width to obtain the desired nominal pore size
     #   for first thickness here
     if (curr_pore_size + NOZZLE_DIAMETER) > NOZZLE_TRUE_DISTANCE:
-        raise Exception('Multinozzle configuration error. The nominal pore size cannot be greater than the nozzle diameter + center-to-center spacing.')
-    theta = m.degrees(m.acos((curr_pore_size + NOZZLE_DIAMETER) / NOZZLE_TRUE_DISTANCE))
+        raise Exception(
+            'Multinozzle configuration error. The nominal pore size cannot be greater than the nozzle diameter + center-to-center spacing.')
+    theta = m.degrees(
+        m.acos((curr_pore_size + NOZZLE_DIAMETER) / NOZZLE_TRUE_DISTANCE))
     MULTINOZZLE_WIDTH = MULTINOZZLE_TRUE_WIDTH * m.cos(m.radians(theta))
     NOZZLE_DISTANCE = NOZZLE_TRUE_DISTANCE * m.cos(m.radians(theta))
     curr_process['multinozzle_width'] = MULTINOZZLE_WIDTH
@@ -2262,7 +2496,7 @@ if myWindow.values:
     prev_process['nozzle_distance'] = NOZZLE_DISTANCE
     prev_process['layer_change_bleed'] = layer_change_bleed
     prev_process['printing_bleed'] = printing_bleed
-        
+
     gapDistance = NOZZLE_DISTANCE
     pass_amplitude_x = (MULTINOZZLE_WIDTH + gapDistance)
     pass_amplitude_y = (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
@@ -2281,10 +2515,10 @@ if myWindow.values:
             titleSurf = 'Surface interpolation parameters'
             instructionsSurf = 'Assign the required following parameters to interpolate the surface mesh from file : ' + proj_file
             fieldsSurf = ['Size u (nb ctrl points)',
-                      'Size v (nb ctrl points)',
-                      'Degree in u-direction',
-                      'Degree in v-direction',
-                      'Interpolation delta']
+                          'Size v (nb ctrl points)',
+                          'Degree in u-direction',
+                          'Degree in v-direction',
+                          'Interpolation delta']
 
             # Try to load the last parameters from the json file
             try:
@@ -2293,21 +2527,25 @@ if myWindow.values:
                     last_params_dict = json.load(infile)
                     defaultParams = list(last_params_dict.values())
 
-                print('Importing projection surface parameters ' + prefFolder + last_projection_params_file)
+                print('Importing projection surface parameters ' +
+                      prefFolder + last_projection_params_file)
             except:
-                print('Could not import projection surface parameters ' + prefFolder + last_projection_params_file)
-                defaultParams = [5,5,2,2,0.05]
+                print('Could not import projection surface parameters ' +
+                      prefFolder + last_projection_params_file)
+                defaultParams = [5, 5, 2, 2, 0.05]
 
             # Creationg of the window instance
             windowWidth = 400
-            windowHeight= 260
+            windowHeight = 260
             print('Waiting for user input...')
-            paramWindow = inputWindow.inputWindow(titleSurf, instructionsSurf, windowWidth, windowHeight, fieldsSurf, defaultParams)
+            paramWindow = inputWindow.inputWindow(
+                titleSurf, instructionsSurf, windowWidth, windowHeight, fieldsSurf, defaultParams)
 
             if paramWindow.values:
-                #Writing json file
-                paramWindow.export_json(prefFolder + last_projection_params_file, defaultParams)
-                [nu,nv,degu,degv,delta] = paramWindow.values
+                # Writing json file
+                paramWindow.export_json(
+                    prefFolder + last_projection_params_file, defaultParams)
+                [nu, nv, degu, degv, delta] = paramWindow.values
 
                 # Data conversion
                 nu = int(nu)
@@ -2319,10 +2557,11 @@ if myWindow.values:
                 msg = 'User canceled'
                 raise Exception(msg)
 
-            surf = interpolate_surface_from_stl(meshFolder + proj_file,nu,nv,degu,degv,delta)
+            surf = interpolate_surface_from_stl(
+                meshFolder + proj_file, nu, nv, degu, degv, delta)
             print('Interpolating surface from : %s...\n' % proj_file)
-            
-    else: # Planar printing (no projection file)
+
+    else:  # Planar printing (no projection file)
         surf = None
 
     # Start calculating script time
@@ -2336,11 +2575,13 @@ if myWindow.values:
     #       the nozzle distance (offset separation scaffolds),
     #       2× half of a nozzle diameter (from both sides of the print)
     #       and the wall distances between scaffolds
-    
+
     init_rows = nb_rows
     init_cols = nb_cols
-    totDimX = nb_rows * MULTINOZZLE_WIDTH + (nb_rows-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
-    totDimY = nb_cols * MULTINOZZLE_WIDTH + (nb_cols-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
+    totDimX = nb_rows * MULTINOZZLE_WIDTH + \
+        (nb_rows-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
+    totDimY = nb_cols * MULTINOZZLE_WIDTH + \
+        (nb_cols-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
     if center_print == 'On X' or center_print == 'Both':
         xOffset = totDimX / 2
         start_x = 0
@@ -2356,8 +2597,10 @@ if myWindow.values:
         raise Exception('Toolpath error : the required coast at end dimension is greater than at least one of the sides of the network. Review the ramp down time parameter or enlarge the network.\n\nCoast at end = %.2f mm\nDim X = %.2f mm\nDim Y = %.2f mm\n' % (coast_at_end, totDimX, totDimY))
 
     # Program creation --------------------------------
-    program_name = MATERIAL_CHOICE['name'][0] + str(nb_layers)+str(int(curr_pore_size*1000))
-    exportFile = last_params_file[0:last_params_file.find('.json')] + '_' + program_name
+    program_name = MATERIAL_CHOICE['name'][0] + \
+        str(nb_layers)+str(int(curr_pore_size*1000))
+    exportFile = last_params_file[0:last_params_file.find(
+        '.json')] + '_' + program_name
 
     # # Exporting a .py file for reuploading the toolpath in RoboDK without having to recalculate everything
     # rdk_reupload_prog_file = exportFile + '.py'
@@ -2378,7 +2621,8 @@ if myWindow.values:
 
         robot = RDK.Item('Fanuc M-20iB/25')
         if robot.Valid():
-            CLEARANCE = FANUC_TRAVEL_CLEARANCE                         # mm, clearance value to travel before the approach point
+            # mm, clearance value to travel before the approach point
+            CLEARANCE = FANUC_TRAVEL_CLEARANCE
             tool = RDK.ItemUserPick('Pick a tool', ITEM_TYPE_TOOL)
             robot.setPoseTool(tool)
             frame = RDK.ItemUserPick('Pick a reference frame', ITEM_TYPE_FRAME)
@@ -2407,7 +2651,7 @@ if myWindow.values:
 
     else:
         # For debugging purposes
-        CLEARANCE = 100;
+        CLEARANCE = 100
         program_name = program_name + '00_debug'
 
     # Setting the rotation layer height parameters and Z offset for the first time
@@ -2435,9 +2679,10 @@ if myWindow.values:
         prog.RunInstruction('Approach move', INSTRUCTION_COMMENT)
 
     posApp[2] = start_z + NOZZLE_DIAMETER + pressure_buildup_z
-    posApp.append('refPos') # A the refPos special attribute for the approach position
+    # A the refPos special attribute for the approach position
+    posApp.append('refPos')
     targetAndMove('Approach', posApp, 0, debug, True, False)
-    posApp.pop() # Remove the special name for the first posApp
+    posApp.pop()  # Remove the special name for the first posApp
     if not debug:
         prog.RunInstruction('Start of print', INSTRUCTION_COMMENT)
         prog.RunInstruction('Extruder(''ON'','+scaff_extr_speed+')')
@@ -2449,29 +2694,29 @@ if myWindow.values:
 
     # Print's toolpath MAIN LOOP (loop for each layer) --------------------------------
     prevPos = posApp
-    prevPos[1] +=  layer_change_bleed
+    prevPos[1] += layer_change_bleed
     prevPos[2] -= pressure_buildup_z / 2
     targetAndMove('L1R1C1Start3', prevPos, 0, debug)
 
-    #--------------------------------------------------------------------------------------------------------------------
+    # --------------------------------------------------------------------------------------------------------------------
     # Main loop on each layer.
-    #--------------------------------------------------------------------------------------------------------------------            
+    # --------------------------------------------------------------------------------------------------------------------
     layer_index_offset = 0
-    
+
     # For every layer,
     #   we loop on the number of columns and rows to generate the array containing the scaffolds.
-    for i in tqdm(range(nb_layers),'Layers generated'):  # First layer starts at i = 0
+    for i in tqdm(range(nb_layers), 'Layers generated'):  # First layer starts at i = 0
         # RoboDK comment for each layer
         if not debug:
             prog.RunInstruction('Layer %i' % (i+1), INSTRUCTION_COMMENT)
-            
+
         # Setting the same z and rotation for one particular layer
         rot = rotOdd if i % 2 == 0 else rotEven
 
         # Setting the Z position according to the layer index
         z = start_z + NOZZLE_DIAMETER + i*layer_height
         prevPos[2] = z
-        
+
         # Choosing the current process parameters according z relative to the thickness
         #   parameters include : wall_distance, pore_size, printing_bleed and layer_change_bleed
         if i % 2 == 0:
@@ -2483,61 +2728,72 @@ if myWindow.values:
                     prev_process['nozzle_distance'] = NOZZLE_DISTANCE
                     prev_process['layer_change_bleed'] = layer_change_bleed
                     prev_process['printing_bleed'] = printing_bleed
-                    
-                    # Update current  values                    
+
+                    # Update current  values
                     curr_pore_size = pore_size_nominal[k]
                     wall_distance = wall_distance_nominal[k]
-                    
+
                     # Nominal bleeding parameters
                     layer_change_bleed = layer_change_bleed_nominal[k]
                     printing_bleed = printing_bleed_nominal[k]
-                    
+
                     # Add the layer to the list of layers to be projected if pore size or wall values change
-                    if (curr_pore_size != last_pore_size or wall_distance != last_wall_distance):# and i % 2 == 0:
-                        overallDimRefPos = {'pos':None}
-                        layer_index_offset = i                            
+                    # and i % 2 == 0:
+                    if (curr_pore_size != last_pore_size or wall_distance != last_wall_distance):
+                        overallDimRefPos = {'pos': None}
+                        layer_index_offset = i
                         curr_process['id'] = k
-                        
+
                         # Definition of the new thickness's microscaffold network geometry
-                        theta = m.degrees(m.acos((curr_pore_size + NOZZLE_DIAMETER) / NOZZLE_TRUE_DISTANCE))
-                        MULTINOZZLE_WIDTH = MULTINOZZLE_TRUE_WIDTH * m.cos(m.radians(theta))
-                        NOZZLE_DISTANCE = NOZZLE_TRUE_DISTANCE * m.cos(m.radians(theta))
-                        
+                        theta = m.degrees(
+                            m.acos((curr_pore_size + NOZZLE_DIAMETER) / NOZZLE_TRUE_DISTANCE))
+                        MULTINOZZLE_WIDTH = MULTINOZZLE_TRUE_WIDTH * \
+                            m.cos(m.radians(theta))
+                        NOZZLE_DISTANCE = NOZZLE_TRUE_DISTANCE * \
+                            m.cos(m.radians(theta))
+
                         gapDistance = NOZZLE_DISTANCE
                         pass_amplitude_x = (MULTINOZZLE_WIDTH + gapDistance)
-                        pass_amplitude_y = (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                        pass_amplitude_y = (
+                            MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
                         pass_step_x = pass_amplitude_x / segments_per_scaffold
                         pass_step_y = pass_amplitude_y / segments_per_scaffold
-                        
-                        nb_rows = m.ceil((totDimX - wall_distance - NOZZLE_DIAMETER - (init_rows-1) * NOZZLE_DISTANCE) / MULTINOZZLE_WIDTH)
-                        nb_cols = m.ceil((totDimY - NOZZLE_DIAMETER - wall_distance - (init_cols-1) * NOZZLE_DISTANCE) / MULTINOZZLE_WIDTH)
-                        
+
+                        nb_rows = m.ceil((totDimX - wall_distance - NOZZLE_DIAMETER - (
+                            init_rows-1) * NOZZLE_DISTANCE) / MULTINOZZLE_WIDTH)
+                        nb_cols = m.ceil((totDimY - NOZZLE_DIAMETER - wall_distance - (
+                            init_cols-1) * NOZZLE_DISTANCE) / MULTINOZZLE_WIDTH)
+
                         # new process dimension
-                        newTotDimX = nb_rows * MULTINOZZLE_WIDTH + (nb_rows-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
-                        newTotDimY = nb_cols * MULTINOZZLE_WIDTH + (nb_cols-1) * NOZZLE_DISTANCE + NOZZLE_DIAMETER + wall_distance
-                        
-                        if nb_rows % 2 == 0: 
+                        newTotDimX = nb_rows * MULTINOZZLE_WIDTH + \
+                            (nb_rows-1) * NOZZLE_DISTANCE + \
+                            NOZZLE_DIAMETER + wall_distance
+                        newTotDimY = nb_cols * MULTINOZZLE_WIDTH + \
+                            (nb_cols-1) * NOZZLE_DISTANCE + \
+                            NOZZLE_DIAMETER + wall_distance
+
+                        if nb_rows % 2 == 0:
                             if newTotDimX - MULTINOZZLE_WIDTH > totDimX:
                                 nb_rows -= 1
                             else:
                                 nb_rows += 1
-                        if nb_cols % 2 == 0: 
+                        if nb_cols % 2 == 0:
                             if newTotDimY - MULTINOZZLE_WIDTH > totDimY:
                                 nb_cols -= 1
                             else:
                                 nb_cols += 1
-                        
-                    break         
-            
+
+                    break
+
             # Update last values
-            #if i % 2 == 0:
+            # if i % 2 == 0:
             last_pore_size = curr_pore_size
-            last_wall_distance = wall_distance 
+            last_wall_distance = wall_distance
             curr_process['multinozzle_width'] = MULTINOZZLE_WIDTH
             curr_process['nozzle_distance'] = NOZZLE_DISTANCE
             curr_process['layer_change_bleed'] = layer_change_bleed
             curr_process['printing_bleed'] = printing_bleed
-        
+
         # Switching layer if not the first one
         if i != 0:
             # Setting the motion speed to a different speed for rotations
@@ -2559,14 +2815,14 @@ if myWindow.values:
                         nbPointsOffset = 1
                 else:
                     nbPointsOffset = 2
-                
+
                 # Adding the special attribute "purge" to the target position
                 if stopAndGo and j == nbPointsToAdd - nbPointsOffset:
                     if len(newOrient[j]) > 7:
                         newOrient[j][7] += ',purge'
                     else:
                         newOrient[j].append('purge')
-                
+
                 # Adding the special attribute "clearColNP" to the target position
                 if layer_change_bleed_clearance > 0 and j == nbPointsToAdd - nbPointsOffset:
                     if len(newOrient[j]) > 7:
@@ -2574,34 +2830,40 @@ if myWindow.values:
                     else:
                         newOrient[j].append('clearColNP')
 
-                targetAndMove('L'+str(i - layer_index_offset + 1)+'R1C1Start'+str(j+1), newOrient[j], i - layer_index_offset, debug)
+                targetAndMove('L'+str(i - layer_index_offset + 1)+'R1C1Start' +
+                              str(j+1), newOrient[j], i - layer_index_offset, debug)
 
                 # Setting the motion speed to a higher speed for printing scaffolds before printing the network again
                 if not debug and ((nbPointsToAdd > 1 and j == nbPointsToAdd-1) or nbPointsToAdd == 1):
-                    prog.RunInstruction('SetSpeedByRegister('+reg_scaff_speed+')')
+                    prog.RunInstruction(
+                        'SetSpeedByRegister('+reg_scaff_speed+')')
 
             prevPos = newOrient[-1]
 
         # Loop on r is used to create passes according to the columns and rows of scaffolds of nb_cols X nb_rows needed
-        #--------------------------
+        # --------------------------
         # To always have the same grid of c x r, we permute this loop max value when the layer changes
-        for r in range(nb_rows if i % 2 == 0 else nb_cols):#tqdm(range(nb_rows if i % 2 == 0 else nb_cols),'rows generated'):
+        # tqdm(range(nb_rows if i % 2 == 0 else nb_cols),'rows generated'):
+        for r in range(nb_rows if i % 2 == 0 else nb_cols):
             # Loop on c is used to create passes according to the columns and rows of scaffolds of nb_cols X nb_rows needed
-            #--------------------------
+            # --------------------------
             # To always have the same grid of c x r, we permute this loop max value when the layer changes
 
             # Adding coast at end by default
             addCoast = stopAndGo
             for c in range(nb_cols if i % 2 == 0 else nb_rows):
                 # Pass for scaffold
-                newPass = addPass(i - layer_index_offset, r, c, prevPos, addCoast)
-                
+                newPass = addPass(i - layer_index_offset,
+                                  r, c, prevPos, addCoast)
+
                 # Add points to the toolpath for non-planar
-                if not proj_file == 'None' or wall_distance > 0: # if we need walls (while planar), otherwise we add points when curving (walls or not)
+                # if we need walls (while planar), otherwise we add points when curving (walls or not)
+                if not proj_file == 'None' or wall_distance > 0:
                     for j in range(len(newPass)):
                         if newPass[j][-1] == 'coast':
                             addCoast = False
-                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
+                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                            c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
 
                 # Add points to the toolpath in planar mode
                 if proj_file == 'None':
@@ -2610,14 +2872,16 @@ if myWindow.values:
                         for j in range(len(newPass)):
                             if newPass[j][-1] == 'coast':
                                 addCoast = False
-                                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
-                     
+                                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                                    c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
+
                     # if there is a layer change bleed clearance, we need to add the last point of the last pass
                     if layer_change_bleed_clearance > 0 and (r == (nb_rows-1 if i % 2 == 0 else nb_cols-1)) and (c == (nb_cols-1 if i % 2 == 0 else nb_rows-1)):
-                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(c+1)+'P'+str(1), newPass[-1], i - layer_index_offset, debug)
-                    
+                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                            c+1)+'P'+str(1), newPass[-1], i - layer_index_offset, debug)
+
                 prevPos = newPass[-1]
-            #--------------------------
+            # --------------------------
             # EndLoop "for c" (cols)
 
             newConnection = addConnection(i - layer_index_offset, r, prevPos)
@@ -2625,13 +2889,14 @@ if myWindow.values:
             nbPointsToAdd = len(newConnection)
             if proj_file == 'None' and wall_distance == 0 and len(newConnection) > 2:
                 nbPointsToAdd = len(newConnection)-1
-            
+
             for j in range(nbPointsToAdd):
-                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(c+1)+'CON'+str(j+1), newConnection[j], i - layer_index_offset, debug)
+                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                    c+1)+'CON'+str(j+1), newConnection[j], i - layer_index_offset, debug)
             prevPos = newConnection[-1]
-        #--------------------------
+        # --------------------------
         # EndLoop "for r" (rows)
-    #--------------------------
+    # --------------------------
     # EndLoop "for i" (layers)
 
     # Retraction -------------------------------------------------------------
@@ -2644,24 +2909,24 @@ if myWindow.values:
         offset = layer_xy_offset if (nb_layers-4) % 4 == 0 else 0
         posRet[0] -= (offset + retract_length)
         posRet[1] += offset
-        
+
     # Odd number of layers
     else:
         offset = layer_xy_offset if (nb_layers-3) % 4 == 0 else 0
         posRet[0] += offset
         posRet[1] += (offset + retract_length)
-    #posRet[2] += layer_height
+    # posRet[2] += layer_height
 
     # Resetting the previous ref position for non-planar gap compensation
     if not proj_file == 'None' and not nb_layers % 2 == 0:
-        prevRefPos = {'pos':None, 'offset':np.array([0,0,0])}
+        prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
         posRet[7] = 'refPos'
-    
+
     targetAndMove('Retract', posRet, i, debug, True, False)
-    
+
     # RoboDK program completion
     if not debug:
-        prog.Pause(retraction_time) # Wait for retraction to complete
+        prog.Pause(retraction_time)  # Wait for retraction to complete
         prog.RunInstruction('onPathFinish')
         prog.RunInstruction('GoHome')
         prog.ShowTargets(show_targets)
@@ -2676,16 +2941,17 @@ if myWindow.values:
     if show_plot:
         if plotType == '3D':
             print('\nImporting Mayavi, please wait...')
-            
+
             # Module imports
             from mayavi import mlab
             from mayavi.mlab import plot3d
-            
+
             # 3D plot
             print("Creating mayavi plot...")
-            fig = mlab.figure(bgcolor=(1,1,1), fgcolor=(0.2,0.2,0.2), figure = program_name)
+            fig = mlab.figure(bgcolor=(1, 1, 1), fgcolor=(
+                0.2, 0.2, 0.2), figure=program_name)
 
-            # Surfaces 
+            # Surfaces
             boite = None
             toolPathPlot = None
             if not proj_file == 'None':
@@ -2697,201 +2963,211 @@ if myWindow.values:
                 Xsurf = evalpts[:, 0]
                 Ysurf = evalpts[:, 1]
                 Zsurf = evalpts[:, 2]
-                
+
                 shapeX = int(1/surf.delta[0])
                 shapeY = int(1/surf.delta[1])
                 # shapeX = surf.ctrlpts_size_u
                 # shapeY = surf.ctrlpts_size_v
-                
-                X = np.reshape(Xsurf,[shapeX,shapeY])
-                Y = np.reshape(Ysurf,[shapeX,shapeY])
-                Z = np.reshape(Zsurf,[shapeX,shapeY])
-                
-                #mlab.mesh(X, Y, Z-0.5, color=meshColor, opacity=1, name='mesh')    # Mesh
-                boite = mlab.mesh(X, Y, Z, color=NURBScolor, opacity=0.5, name='NURBS infill')  # NURBS infill
-                mlab.mesh(X, Y, Z, color=NURBSwireColor, representation='wireframe', opacity=1, line_width = 1.0, name='NURBS wireframe') # NURBS wireframe
+
+                X = np.reshape(Xsurf, [shapeX, shapeY])
+                Y = np.reshape(Ysurf, [shapeX, shapeY])
+                Z = np.reshape(Zsurf, [shapeX, shapeY])
+
+                # mlab.mesh(X, Y, Z-0.5, color=meshColor, opacity=1, name='mesh')    # Mesh
+                boite = mlab.mesh(X, Y, Z, color=NURBScolor,
+                                  opacity=0.5, name='NURBS infill')  # NURBS infill
+                mlab.mesh(X, Y, Z, color=NURBSwireColor, representation='wireframe',
+                          opacity=1, line_width=1.0, name='NURBS wireframe')  # NURBS wireframe
 
             # Expected printed geometry (showing filaments)
-            if show_geom:                
-                filament_radius = 0.14 # Calibrated for 0.14 = 250 µm diameter
-                filament_sides = 12 # 6 for default performance, 12 gives nice rounded shape
-                filaments_locations = np.empty([NB_NOZZLES, 3, np.shape(nozzles_locations)[0]])
-                
+            if show_geom:
+                filament_radius = 0.14  # Calibrated for 0.14 = 250 µm diameter
+                filament_sides = 12  # 6 for default performance, 12 gives nice rounded shape
+                filaments_locations = np.empty(
+                    [NB_NOZZLES, 3, np.shape(nozzles_locations)[0]])
+
                 if len(nozzles_locations) > 0:
                     print('Plotting microscaffold network geometry...')
-                    for iLoc in range(len(nozzles_locations)): # As many nozzles_locations as pos in the toolpath (ex. 142 for sine)
-                        for iNoz in range(len(nozzles_locations[iLoc])):      # As many nozzles as number of nozzles in the nozzle array (ex. 26 for MEK SN-01)
+                    # As many nozzles_locations as pos in the toolpath (ex. 142 for sine)
+                    for iLoc in range(len(nozzles_locations)):
+                        # As many nozzles as number of nozzles in the nozzle array (ex. 26 for MEK SN-01)
+                        for iNoz in range(len(nozzles_locations[iLoc])):
                             filaments_locations[iNoz][0][iLoc] = nozzles_locations[iLoc][iNoz][0]
                             filaments_locations[iNoz][1][iLoc] = nozzles_locations[iLoc][iNoz][1]
                             filaments_locations[iNoz][2][iLoc] = nozzles_locations[iLoc][iNoz][2]
-                    
+
                     # Plotting
-                    for filament_location in tqdm(filaments_locations,'Filaments generated'):
+                    for filament_location in tqdm(filaments_locations, 'Filaments generated'):
                         xf = filament_location[0]
                         yf = filament_location[1]
                         zf = filament_location[2]
-                        mlab.plot3d(xf,yf,zf, color=MATERIAL_CHOICE['color'], tube_radius = filament_radius, tube_sides = filament_sides, name='filament')
-                    
+                        mlab.plot3d(
+                            xf, yf, zf, color=MATERIAL_CHOICE['color'], tube_radius=filament_radius, tube_sides=filament_sides, name='filament')
+
             # end if show_geom
-                                
+
             # Toolpath plot
             if show_toolpath:
                 print('Plotting toolpath...')
                 tubeRadius = 0.14
-                toolPathPlot = mlab.plot3d(xs,ys,zs, color=yellowColor, tube_radius = tubeRadius, name='toolpath')#, marker='o')
+                toolPathPlot = mlab.plot3d(
+                    xs, ys, zs, color=yellowColor, tube_radius=tubeRadius, name='toolpath')  # , marker='o')
             # end if show_toolpath
 
             # Plot the multinozzle array footprint location on the 3D graph
             footprint_tube_radius = 0.3
             if show_footprint and len(printhead_locations) > 0:
                 print('Plotting printhead locations...')
-                for location in tqdm(printhead_locations,'Printhead locations generated'):
-                    xl = np.reshape(location,(2,3)).T[0]
-                    yl = np.reshape(location,(2,3)).T[1]
-                    zl = np.reshape(location,(2,3)).T[2]
-                    mlab.plot3d(xl,yl,zl, color=cyanColor, tube_radius = footprint_tube_radius, name = 'printhead_location')
+                for location in tqdm(printhead_locations, 'Printhead locations generated'):
+                    xl = np.reshape(location, (2, 3)).T[0]
+                    yl = np.reshape(location, (2, 3)).T[1]
+                    zl = np.reshape(location, (2, 3)).T[2]
+                    mlab.plot3d(xl, yl, zl, color=cyanColor,
+                                tube_radius=footprint_tube_radius, name='printhead_location')
             # end if show_footprint
-                
+
             # Auto adjust pore size debugging plot
             if debugAutoAdjustPoreSize:
                 if len(heronFoot) > 0:
-                    for foot in tqdm(heronFoot,'Heron footprints'):
-                        xl = np.reshape(foot,(2,3)).T[0]
-                        yl = np.reshape(foot,(2,3)).T[1]
-                        zl = np.reshape(foot,(2,3)).T[2]
-                        mlab.plot3d(xl,yl,zl, color=cyanColor, tube_radius = footprint_tube_radius, name = 'heron footprint')
-                
+                    for foot in tqdm(heronFoot, 'Heron footprints'):
+                        xl = np.reshape(foot, (2, 3)).T[0]
+                        yl = np.reshape(foot, (2, 3)).T[1]
+                        zl = np.reshape(foot, (2, 3)).T[2]
+                        mlab.plot3d(xl, yl, zl, color=cyanColor,
+                                    tube_radius=footprint_tube_radius, name='heron footprint')
+
                 cpt = 0
                 colors = [redColor, greenColor, blueColor]
                 for heronPts in [heronPt1, heronPt2, heronPt3]:
                     if len(heronPts) > 0:
                         heronPts = np.array(heronPts)
-                        mlab.points3d(heronPts[:,0],heronPts[:,1],heronPts[:,2],
+                        mlab.points3d(heronPts[:, 0], heronPts[:, 1], heronPts[:, 2],
                                       color=colors[cpt],
                                       scale_factor=1,
                                       name='heron_point')
                     cpt += 1
-                
+
             # Plot the orientation matrix triad vectors + collision detection
             if show_triad:
                 print('Plotting TCP triads...')
                 triadScale = 2.5
                 triadOpacity = 0.9
-                
+
                 # Plot normals
-                for normal in tqdm(normals,'Normals generated'):
-                    xn = np.reshape(normal,(2,3)).T[0]
+                for normal in tqdm(normals, 'Normals generated'):
+                    xn = np.reshape(normal, (2, 3)).T[0]
                     xn[1] = triadScale*xn[1] + xn[0]
-                    yn = np.reshape(normal,(2,3)).T[1]
+                    yn = np.reshape(normal, (2, 3)).T[1]
                     yn[1] = triadScale*yn[1] + yn[0]
-                    zn = np.reshape(normal,(2,3)).T[2]
+                    zn = np.reshape(normal, (2, 3)).T[2]
                     zn[1] = triadScale*zn[1] + zn[0]
-                    myArrow = mlab.quiver3d(xn[0], yn[0], zn[0], xn[1]-xn[0], yn[1]-yn[0], zn[1]-zn[0], 
-                                            color=blueColor, 
-                                            opacity=triadOpacity, 
-                                            scale_factor = triadScale, 
-                                            mode = 'arrow',
-                                            name = 'normal')
+                    myArrow = mlab.quiver3d(xn[0], yn[0], zn[0], xn[1]-xn[0], yn[1]-yn[0], zn[1]-zn[0],
+                                            color=blueColor,
+                                            opacity=triadOpacity,
+                                            scale_factor=triadScale,
+                                            mode='arrow',
+                                            name='normal')
 
                 # Plot tu tangents
-                for tangent in tqdm(tangentsu,'Tangents on u generated'):
-                    xt = np.reshape(tangent,(2,3)).T[0]
+                for tangent in tqdm(tangentsu, 'Tangents on u generated'):
+                    xt = np.reshape(tangent, (2, 3)).T[0]
                     xt[1] = triadScale*xt[1] + xt[0]
-                    yt = np.reshape(tangent,(2,3)).T[1]
+                    yt = np.reshape(tangent, (2, 3)).T[1]
                     yt[1] = triadScale*yt[1] + yt[0]
-                    zt = np.reshape(tangent,(2,3)).T[2]
+                    zt = np.reshape(tangent, (2, 3)).T[2]
                     zt[1] = triadScale*zt[1] + zt[0]
-                    mlab.quiver3d(xt[0], yt[0], zt[0], xt[1]-xt[0], yt[1]-yt[0], zt[1]-zt[0], 
-                                  color=redColor, 
-                                  opacity=triadOpacity, 
-                                  scale_factor = triadScale, 
-                                  mode = 'arrow',
-                                  name = 't_u')
-                    
+                    mlab.quiver3d(xt[0], yt[0], zt[0], xt[1]-xt[0], yt[1]-yt[0], zt[1]-zt[0],
+                                  color=redColor,
+                                  opacity=triadOpacity,
+                                  scale_factor=triadScale,
+                                  mode='arrow',
+                                  name='t_u')
+
                 # Plot tv tangents
-                for tangent in tqdm(tangentsv,'Tangents on v generated'):
-                    xt = np.reshape(tangent,(2,3)).T[0]
+                for tangent in tqdm(tangentsv, 'Tangents on v generated'):
+                    xt = np.reshape(tangent, (2, 3)).T[0]
                     xt[1] = triadScale*xt[1] + xt[0]
-                    yt = np.reshape(tangent,(2,3)).T[1]
+                    yt = np.reshape(tangent, (2, 3)).T[1]
                     yt[1] = triadScale*yt[1] + yt[0]
-                    zt = np.reshape(tangent,(2,3)).T[2]
+                    zt = np.reshape(tangent, (2, 3)).T[2]
                     zt[1] = triadScale*zt[1] + zt[0]
-                    mlab.quiver3d(xt[0], yt[0], zt[0], xt[1]-xt[0], yt[1]-yt[0], zt[1]-zt[0], 
-                                  color=greenColor, 
-                                  opacity=triadOpacity, 
-                                  scale_factor = triadScale, 
-                                  mode = 'arrow',
-                                  name = 't_v')
+                    mlab.quiver3d(xt[0], yt[0], zt[0], xt[1]-xt[0], yt[1]-yt[0], zt[1]-zt[0],
+                                  color=greenColor,
+                                  opacity=triadOpacity,
+                                  scale_factor=triadScale,
+                                  mode='arrow',
+                                  name='t_v')
             # end if show_triad
 
             # Plot multinozzle array collision with projected surface
             if show_footprint and len(collisions) > 0:
                 print('Plotting collisions...')
-                for collision in tqdm(collisions,'Collision footprints generated'):
-                    xc = np.reshape(collision,(2,3)).T[0]
-                    yc = np.reshape(collision,(2,3)).T[1]
-                    zc = np.reshape(collision,(2,3)).T[2]
-                    mlab.plot3d(xc,yc,zc, color=pinkColor, tube_radius = footprint_tube_radius, name = 'coll_footprint')
+                for collision in tqdm(collisions, 'Collision footprints generated'):
+                    xc = np.reshape(collision, (2, 3)).T[0]
+                    yc = np.reshape(collision, (2, 3)).T[1]
+                    zc = np.reshape(collision, (2, 3)).T[2]
+                    mlab.plot3d(xc, yc, zc, color=pinkColor,
+                                tube_radius=footprint_tube_radius, name='coll_footprint')
             # end if show_footprint
-            
+
             # Plot collision points
             if show_footprint and len(collisions_coords) > 0:
                 collisions_coords = np.array(collisions_coords)
-                mlab.points3d(collisions_coords[:,0],collisions_coords[:,1],collisions_coords[:,2],
+                mlab.points3d(collisions_coords[:, 0], collisions_coords[:, 1], collisions_coords[:, 2],
                               color=redColor,
                               scale_factor=1,
                               name='coll_point')
             # end if show_footprint
-            
-            if debugGapAdjust: 
+
+            if debugGapAdjust:
                 # Gap Adjust: plot of reference positions
                 if len(refPositions) > 0:
                     refPositions = np.array(refPositions)
-                    mlab.points3d(refPositions[:,0],refPositions[:,1],refPositions[:,2],
+                    mlab.points3d(refPositions[:, 0], refPositions[:, 1], refPositions[:, 2],
                                   color=blueColor,
                                   scale_factor=1.0,
                                   name='refPos')
-                    
+
                 #  Gap Adjust: plot of wrong gap positions
                 if len(wrongPosGap) > 0:
                     wrongPosGap = np.array(wrongPosGap)
-                    mlab.points3d(wrongPosGap[:,0],wrongPosGap[:,1],wrongPosGap[:,2],
+                    mlab.points3d(wrongPosGap[:, 0], wrongPosGap[:, 1], wrongPosGap[:, 2],
                                   color=purpleColor,
                                   scale_factor=1.0,
                                   name='oldGapPos')
-                    
+
                 #  Gap Adjust: plot of adjusted gap positions
                 if len(newPosGap) > 0:
                     newPosGap = np.array(newPosGap)
-                    mlab.points3d(newPosGap[:,0],newPosGap[:,1],newPosGap[:,2],
+                    mlab.points3d(newPosGap[:, 0], newPosGap[:, 1], newPosGap[:, 2],
                                   color=blueGreenishColor,
                                   scale_factor=1.0,
                                   name='gapPos')
-                    
+
                 #  Gap Adjust: plot of adjusted gap positions
                 if len(posToCheck) > 0:
                     posToCheck = np.array(posToCheck)
-                    mlab.points3d(posToCheck[:,0],posToCheck[:,1],posToCheck[:,2],
+                    mlab.points3d(posToCheck[:, 0], posToCheck[:, 1], posToCheck[:, 2],
                                   color=beigeColor,
                                   scale_factor=1.0,
                                   name='gapPos')
-                
+
                 #  Gap Adjust: plot of direction vectors
-                for dirVect in tqdm(dirVectors,'Vectors generated'):
-                    xn = np.reshape(dirVect,(2,3)).T[0]
+                for dirVect in tqdm(dirVectors, 'Vectors generated'):
+                    xn = np.reshape(dirVect, (2, 3)).T[0]
                     xn[1] = xn[1] + xn[0]
-                    yn = np.reshape(dirVect,(2,3)).T[1]
+                    yn = np.reshape(dirVect, (2, 3)).T[1]
                     yn[1] = yn[1] + yn[0]
-                    zn = np.reshape(dirVect,(2,3)).T[2]
+                    zn = np.reshape(dirVect, (2, 3)).T[2]
                     zn[1] = zn[1] + zn[0]
-                    myArrow = mlab.quiver3d(xn[0], yn[0], zn[0], xn[1]-xn[0], yn[1]-yn[0], zn[1]-zn[0], 
-                                            color=cyanColor, 
-                                            opacity=0.9, 
-                                            scale_factor = 1.0, 
-                                            mode = 'arrow',
+                    myArrow = mlab.quiver3d(xn[0], yn[0], zn[0], xn[1]-xn[0], yn[1]-yn[0], zn[1]-zn[0],
+                                            color=cyanColor,
+                                            opacity=0.9,
+                                            scale_factor=1.0,
+                                            mode='arrow',
                                             name='dirVector')
             # end if debugGapAdjust
-            
+
             # Outline boundaries
             if boite is not None:
                 xmin = min(min(Xsurf), min(xs))
@@ -2900,27 +3176,30 @@ if myWindow.values:
                 ymax = max(max(Ysurf), max(ys))
                 zmin = min(min(Zsurf), min(zs))
                 zmax = max(max(Zsurf), max(zs))+10
-                
-                # Style and activation 
-                mlab.outline(boite, extent=[xmin,xmax,ymin,ymax,zmin,zmax])
-                ax = mlab.axes(boite, xlabel = 'x (mm)', ylabel = 'y (mm)', zlabel = 'z (mm)', nb_labels = 3,
-                               extent=[xmin,xmax,ymin,ymax,zmin,zmax],
-                               #ranges=[0,200,0,200,0,20], # sinusoidal surface (paper 2)
-                               #ranges=[200,1200,-80,520,-320,180], # FC 1:1 surface (paper 2)
+
+                # Style and activation
+                mlab.outline(boite, extent=[
+                             xmin, xmax, ymin, ymax, zmin, zmax])
+                ax = mlab.axes(boite, xlabel='x (mm)', ylabel='y (mm)', zlabel='z (mm)', nb_labels=3,
+                               extent=[xmin, xmax, ymin, ymax, zmin, zmax],
+                               # ranges=[0,200,0,200,0,20], # sinusoidal surface (paper 2)
+                               # ranges=[200,1200,-80,520,-320,180], # FC 1:1 surface (paper 2)
                                name='box')
-            elif toolPathPlot is not None:                
+            elif toolPathPlot is not None:
                 xmin = min(xs)
                 xmax = max(xs)
                 ymin = min(ys)
                 ymax = max(ys)
                 zmin = min(zs)
                 zmax = max(zs)
-                
-                # Style and activation 
-                ax = mlab.outline(toolPathPlot, extent=[xmin,xmax,ymin,ymax,zmin,zmax])
-                ax = mlab.axes(toolPathPlot, xlabel = 'x (mm)', ylabel = 'y (mm)', zlabel = 'z (mm)', nb_labels = 4, extent=[xmin,xmax,ymin,ymax,zmin,zmax])
+
+                # Style and activation
+                ax = mlab.outline(toolPathPlot, extent=[
+                                  xmin, xmax, ymin, ymax, zmin, zmax])
+                ax = mlab.axes(toolPathPlot, xlabel='x (mm)', ylabel='y (mm)',
+                               zlabel='z (mm)', nb_labels=4, extent=[xmin, xmax, ymin, ymax, zmin, zmax])
             # end if boite else toolPathPlot
-            
+
             if (boite and toolPathPlot) is not None:
                 ax.axes.corner_offset = 0.1
                 ax.axes.font_factor = 1.5
@@ -2928,72 +3207,83 @@ if myWindow.values:
                 ax.label_text_property.bold = False
                 ax.label_text_property.italic = False
             # end if boite and toolPathPlot
-                        
+
             # !!! 3D plot is shown after the script execution and exports
 
-        else:            
-            # 2D plot      
-            print('Importing Matplotlib, please wait...')      
+        else:
+            # 2D plot
+            print('Importing Matplotlib, please wait...')
             from mpl_toolkits.mplot3d import Axes3D
             import matplotlib.pyplot as plt
             import matplotlib.patheffects as pe
             from matplotlib import pyplot as plt
-            
+
             print('Plotting...')
-            plt.plot(xs,ys, c='y', marker='o')
+            plt.plot(xs, ys, c='y', marker='o')
 
             # data labels for debugging
             if show_labels:
-                for x,y in zip(xs,ys):
+                for x, y in zip(xs, ys):
 
                     label = "{:.3f}".format(x) + "; " + "{:.3f}".format(y)
 
-                    plt.annotate(label, # this is the text
-                              (x,y), # this is the point to label
-                              textcoords="offset points", # how to position the text
-                              xytext=(0,10), # distance from text to points (x,y)
-                              ha='center') # horizontal alignment can be left, right or center
+                    plt.annotate(label,  # this is the text
+                                 (x, y),  # this is the point to label
+                                 textcoords="offset points",  # how to position the text
+                                 # distance from text to points (x,y)
+                                 xytext=(0, 10),
+                                 ha='center')  # horizontal alignment can be left, right or center
 
             plt.xlabel('x (mm)')
             plt.ylabel('y (mm)')
-            plt.tick_params(labelsize = 15)
+            plt.tick_params(labelsize=15)
             plt.axis('equal')
             print('Showing plot now')
             plt.show()
-    
+
     # Message box results --------------------------------
-    now = dt.now() # Tic for timestamp in file identification 
+    now = dt.now()  # Tic for timestamp in file identification
     if debug or RDK.Item(program_name).Valid():
         # Stats calculation
         # To-do : take over-extrusion into consideration
-        totDim = str(round(totDimX,2)) + ' mm × ' + str(round(totDimY,2)) + ' mm × ' + str(round(totDimZ,2)) + ' mm'
-        if wall_distance == 0: TX = 1
-        tot_volume = print_dist * NOZZLE_AREA * NB_NOZZLES *(1/1000) * TX # mm³ to cm³
+        totDim = str(round(totDimX, 2)) + ' mm × ' + str(round(totDimY, 2)
+                                                         ) + ' mm × ' + str(round(totDimZ, 2)) + ' mm'
+        if wall_distance == 0:
+            TX = 1
+        tot_volume = print_dist * NOZZLE_AREA * \
+            NB_NOZZLES * (1/1000) * TX  # mm³ to cm³
         tot_mass = tot_volume * rho_selected
-        travel_time = CLEARANCE / travel_speed + pressure_buildup_time/1000 + retraction_time/1000 # TO-DO : add other purge & retraction time
-        print_time = (print_dist + m.sqrt(approach_length**2 + layer_height**2) + m.sqrt(retract_length**2 + layer_height**2)) / scaff_speed
-        print_time_min = [m.floor(print_time/60), (print_time/60 - m.floor(print_time/60))*60]
+        travel_time = CLEARANCE / travel_speed + pressure_buildup_time/1000 + \
+            retraction_time/1000  # TO-DO : add other purge & retraction time
+        print_time = (print_dist + m.sqrt(approach_length**2 + layer_height **
+                      2) + m.sqrt(retract_length**2 + layer_height**2)) / scaff_speed
+        print_time_min = [m.floor(print_time/60),
+                          (print_time/60 - m.floor(print_time/60))*60]
         tot_time = travel_time + print_time
 
         msg = '%s generated successfully using %s\n\n Script execution time : %s\n\n Print dimensions (X × Y × Z) = %s\n Print distance = %.2f mm\n Total mass = %.2f g\n Print volume = %.2f cm³\n Available volume = %.2f cm³\n Print time = %.2f s (%d m %d s)\n Number of collision avoided = %s\n'
         paramsList = ""
-        
+
         nbColToPrint = str(len(collisions)) if check_col else 'Deactivated'
 
         # Create log file for data information
         if export_stats:
-            logFile = exportFile + '_stats_' + now.strftime("%d-%m-%y") + '_' + now.strftime("%H%M%S") +'.txt'
+            logFile = exportFile + '_stats_' + \
+                now.strftime("%d-%m-%y") + '_' + \
+                now.strftime("%H%M%S") + '.txt'
             flog = open(exportFolder + logFile, 'w+')
             flog.write(program_name+' infos log file\n')
-            flog.write('Generated on : '+now.strftime("%d/%m/%y")+', '+now.strftime("%H:%M:%S")+'\n\n')
-            flog.write(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass, tot_volume, AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
-            
+            flog.write('Generated on : '+now.strftime("%d/%m/%y") +
+                       ', '+now.strftime("%H:%M:%S")+'\n\n')
+            flog.write(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass,
+                       tot_volume, AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
+
             # Printing parameters. TO-DO : change for json based structure for easy copy-paste in mltnzl_params.json file
             flog.write('\nPrinting parameters :\n\n')
             delim = np.empty((1, len(fields)), dtype='str')
-            delim[:]='='
-            tempA = np.char.add(fields,delim)
-            tableParams = np.char.add(tempA,myWindow.values)
+            delim[:] = '='
+            tempA = np.char.add(fields, delim)
+            tableParams = np.char.add(tempA, myWindow.values)
             flog.writelines(line + '\n' for line in tableParams.tolist()[0])
             flog.close()
 
@@ -3001,9 +3291,9 @@ if myWindow.values:
         if show_plot and plotType == '3D':
             print('Showing plot now')
             print('Stop plot interaction to end MTG.')
-            
+
             mlab.gcf().scene.parallel_projection = True
-            
+
             # # Seting up the camera default position for sinusoidal surface (paper 2)
             # fig.scene.camera.position = [324.6355296418291, 531.281013589386, 157.96587128335582]
             # fig.scene.camera.focal_point = [107.73397429945247, 82.87436431488393, -1.2566351895412762]
@@ -3012,7 +3302,7 @@ if myWindow.values:
             # fig.scene.camera.clipping_range = [264.31577450965443, 846.382619348482]
             # fig.scene.camera.compute_view_plane_normal()
             # fig.scene.render()
-            
+
             # # debugging 3x3 on cylinder r200
             # fig.scene.camera.position = [586.6835012895141, -32.390502730679614, 896.2804875856534]
             # fig.scene.camera.focal_point = [52.53099301903285, 31.094952662541758, 7.914615722018318]
@@ -3021,45 +3311,52 @@ if myWindow.values:
             # fig.scene.camera.clipping_range = [752.4039543012107, 1363.6342259339285]
             # fig.scene.camera.compute_view_plane_normal()
             # fig.scene.render()
-                        
+
             # Showing the 3D plot
             mlab.show(stop=True)
 
         if not debug:
-            mbox(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass, tot_volume, AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
+            mbox(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass, tot_volume,
+                 AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
             RDK.Update()
-        
-        print(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass, tot_volume, AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
-        
+
+        print(msg % (program_name, scriptname, deltaFormated, totDim, print_dist, tot_mass, tot_volume,
+              AVAILABLE_VOLUME, print_time, print_time_min[0], print_time_min[1], nbColToPrint))
+
         # Saving expected print geometry as .vtp file --------------------------------
         #   To save as STL : 1) read with Paraview, 2) export scene as .x3d, 3) open with Blender and export .stl
         if exportPrintGeometry and show_plot and plotType == '3D':
-            decision = input('Do you wish to export this print geometry ? (yes/no) : ')
-            
+            decision = input(
+                'Do you wish to export this print geometry ? (yes/no) : ')
+
             if 'y' in decision.lower():
                 # Tic for timestamp in file identification --------------------------------
                 now = dt.now()
-                outputFile = exportFile + '_' + now.strftime("%d-%m-%y") + '_' + now.strftime("%H%M%S") + '.vtp'
-                print('Exporting %s, please wait ...\n' % (exportFolder + outputFile))
+                outputFile = exportFile + '_' + \
+                    now.strftime("%d-%m-%y") + '_' + \
+                    now.strftime("%H%M%S") + '.vtp'
+                print('Exporting %s, please wait ...\n' %
+                      (exportFolder + outputFile))
                 time.sleep(1)
                 from tvtk.api import tvtk, write_data
                 ap = tvtk.AppendPolyData()
-                
+
                 figObjects = fig.children
                 for myObject in figObjects:
                     if myObject.name == 'filament':
                         tubeFilter = myObject.children[0].children[0].outputs[0]
-                        tubePolyData= tubeFilter.output
+                        tubePolyData = tubeFilter.output
                         ap.add_input_data(tubePolyData)
                 ap.update()
-                write_data(ap.get_output_data_object(0), exportFolder + outputFile)
+                write_data(ap.get_output_data_object(
+                    0), exportFolder + outputFile)
                 print('Done exporting.')
-        
+
         # Console feedback
         print('Multinozzle Toolpath Generator is finished\n')
-    
+
     else:
-      mbox('There was a problem generating ' + program_name)
+        mbox('There was a problem generating ' + program_name)
 else:
     msg = 'User canceled'
     if debug:
