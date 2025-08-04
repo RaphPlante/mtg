@@ -126,6 +126,7 @@ Version		    Notes
                 
 5.7 
 2025-02-14      Added 2 new Multinozzle configurations
+                750 GMN, 184 GMN, Mono
 
 -------------------------------------------------------------------------------------------------------------------------
 """
@@ -166,8 +167,9 @@ MLTNZL_CONFIG_MEK_SN123 = {'name': 'MEK SN 01-03',
                            'nb': 26, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_750_GMN = {'name': '750 GMN', 'nb': 36, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.434}
+MLTNZL_CONFIG_Mono = {'name': 'Mono', 'nb': 1, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123,
-                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN]
+                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN, MLTNZL_CONFIG_Mono]
 MLTNZL_CONFIG_LIST = [i['name'] for i in MLTNZL_CONFIGS]
 MLTNZL_CONFIG_LIST.append(0)
 MLTNZL_CONFIG = ''
@@ -278,7 +280,7 @@ plotType = ['2D', '3D', 1]                  # Specify is plot is 2D or 3D
 # Show data label on plots for debugging
 show_labels = [True, False, 0]
 # Debug mode : send toolpath to RoboDK if set to False
-debug = [True, False, 1]
+debug = [True, False, 0]
 # Export stats : create or not the info file containing the print stats and parameters
 export_stats = [True, False, 0]
 # Set to False to save computation time, but will not check collision of nozzles with the surface

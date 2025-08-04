@@ -126,6 +126,7 @@ Version		    Notes
                 
 5.7 
 2025-02-14      Added 2 new Multinozzle configurations
+                750 GMN, 184 GMN, Mono
 
 -------------------------------------------------------------------------------------------------------------------------
 """
@@ -166,10 +167,11 @@ MLTNZL_CONFIG_MEK_SN123 = {'name': 'MEK SN 01-03',
                            'nb': 26, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_750_GMN = {'name': '750 GMN', 'nb': 36, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.434}
+MLTNZL_CONFIG_Mono = {'name': 'Mono', 'nb': 1, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123,
-                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN]
+                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN, MLTNZL_CONFIG_Mono]
 MLTNZL_CONFIG_LIST = [i['name'] for i in MLTNZL_CONFIGS]
-MLTNZL_CONFIG_LIST.append(0)
+MLTNZL_CONFIG_LIST.append(2)
 MLTNZL_CONFIG = ''
 
 # Reservoir parameters
@@ -177,7 +179,7 @@ RESERVOIR_48 = '48 cm³'                 # 48 cm³ reservoir type
 RESERVOIR_250 = '250 cm³'               # 250 cm³ reservoir type
 RESERVOIR_TYPE = ''                     # choosen reservoir type from the list
 # list of reservoir type to display in the input window
-RESERVOIR_LIST = [RESERVOIR_48, RESERVOIR_250, 0]
+RESERVOIR_LIST = [RESERVOIR_48, RESERVOIR_250, 1]
 # cm³, available 48 cm³ ink cartridge volume as per MEK's drawings (= vol piston end - vol piston start)
 AVAILABLE_VOLUME_48 = 52.93022 - 5.07999
 # cm³, available 250 cm³ ink cartridge volume (= vol piston end - vol piston start)
@@ -199,7 +201,7 @@ MAT_EPON014 = {'name': 'EPON 0:14', 'rho': 1.2137, 'color': red_color, 'w': 0, '
 # MAT_ABRA510, MAT_ABRA108, MAT_ABRABENCH, MAT_EPON014, MAT_EPON512, MAT_EPON1010]
 MATERIALS = [MAT_INK6040, MAT_ABRA012C, MAT_EPON014]
 MATERIALS_LIST = [i['name'] for i in MATERIALS]
-MATERIALS_LIST.append(0)
+MATERIALS_LIST.append(1)
 MATERIAL_CHOICE = ''
 # empirical tax multiplier to account for over-extrusion (start, wall creation, end)
 TX = 1.20
@@ -208,9 +210,9 @@ TX = 1.20
 # mm/s, default max travel speed for the Fanuc movements
 travel_speed = 100
 # mm/s, default max target printing speed for the Fanuc movements
-scaff_speed = 50
+scaff_speed = 100
 # mm/s, default max target printing speed for Fanuc rotations
-rot_speed = 50
+rot_speed = 100
 # TO-DO : use or delete. default registry for travel speed for the Fanuc movements
 reg_travel_speed = 'R[20]'
 # TO-DO : use or delete. default registry for printing speed for the Fanuc movements
@@ -219,7 +221,7 @@ reg_scaff_speed = 'R[21]'
 reg_rot_speed = 'R[25]'
 # voltage, list of available values for scaffold printing speed. See multinozzle controler.
 scaff_extr_speed = ['0-1 VDC', '1-2 VDC', '2-3 VDC', '3-4 VDC',
-                    '4-5 VDC', '5-6 VDC', '6-7 VDC', '7-8 VDC', '8-9 VDC', '9-10 VDC', 4]
+                    '4-5 VDC', '5-6 VDC', '6-7 VDC', '7-8 VDC', '8-9 VDC', '9-10 VDC', 5]
 # s, time in seconds to wait for the pressure to build up before starting the print
 pressure_buildup_time = 5.0
 # mm, adds a Z offset when building up the pressure to avoir accumulating material on the printhead
@@ -249,27 +251,29 @@ layer_change_bleed_nominal = '26.0, 40.0'
 # mm, length of deposition for first layer before first wall and after last wall
 layer_change_bleed = 26.0
 # mm, vertical offset applied to the end of bleeding when changing layers to avoid gathering / smudging material under the printhead
-layer_change_bleed_clearance = 4.0
+layer_change_bleed_clearance = 10.0
 printing_bleed_nominal = '8.0, 18.75'
 # mm, length of deposition for second layer before first wall and after last wall
 printing_bleed = 8.0
 approach_length = 10.0                  # mm, length of travel to the first point
 # mm, length of retraction from the last point
 retract_length = 10.0
-nb_layers = 2                           # number of layers
+nb_layers = 10                           # number of layers
 # number of rows of scaffolds (following X)
 nb_rows = 3
 # number of columns of scaffolds (following Y)
 nb_cols = 3
-wall_distance_nominal = '1.0, 0.0'          # mm, wall_distance collection
+wall_distance_nominal = '0.0, 0.0'          # mm, wall_distance collection
 # Number of points used to create a scaffold unit. Use more to better approximate a curve for non-planar deposition
 segments_per_scaffold = 1
 # µm, the starting (first layer) pore size = air gap distance between filaments of the same layer
 pore_size_nominal = '0.750, 0.184'
 # mm, the corresponding thickness for each pore_size_nominal
-thickness_nominal = '4, 6'
+thickness_nominal = '10, 6'
 # If set to True : will automatically apply a printhead rotation around its axis to adjust the pore size between each filaments across the scaffold layers
 adjust_pore_size = ['None', 'On X', 'On Y', 'Both', 0]
+# If True : will automatically double the number of layers, and pass in between already printed filament to densify the layer.
+compact_path = [True, False, 0]
 # TO-DO : remove, set to always false. Show targets list in RobotDK
 show_targets = [True, False, 1]
 # 3D Plot toolpath at the end of the generation
@@ -286,11 +290,11 @@ check_col = [True, False, 0]
 # Include stop and go to prevent material losses when changing layers
 stopAndGo = [True, False, 1]
 # Set to True to show the filaments geometry on the 3D visualization
-show_geom = [True, False, 0]
+show_geom = [True, False, 1]
 # Set to True to show the toolpath on the 3D visualization
-show_toolpath = [True, False, 0]
+show_toolpath = [True, False, 1]
 # Set to True to show the triads on the 3D visualization
-show_triad = [True, False, 0]
+show_triad = [True, False, 1]
 # Set to True to compensate gaps due to toolpath deformation
 compensateDeformation = [True, False, 0]
 # Set to True to move the projected origin to the corresponding X and Y origin on the non-planar surface
@@ -450,20 +454,23 @@ tot_time = 0                            # Total forecast program time
 #       prevPos : list, previous cartesian position kept in memory
 #       addCoast : bool, coast at end parameter (distance for retraction)
 #
-def addPass(i, r, c, prevPos, addCoast):
+def addPassxxx(i, r, c, prevPos, addCoast):
     coords = []
     needCoast = True
+    cycle_idx = i % 4 if is_even else 0
+    direction_sign = 1 if cycle_idx in [0, 1] else -1
+
 
     # print('----------------------------------')
     for k in range(segments_per_scaffold):
         # Odd layers 1,3,5,... (i = 0, 2, 4, ...) ---------------------------------
         if i % 2 == 0:
             if r % 2 == 0:
-                y = prevPos[1] + pass_step_y
-                print_direction = '+y'
+                y = prevPos[1] + pass_step_y *  direction_sign
+                print_direction = '+y' if direction_sign == 1 else '-y'
             else:
-                y = prevPos[1] - pass_step_y
-                print_direction = '-y'
+                y = prevPos[1] - pass_step_y *  direction_sign
+                print_direction = '-y' if direction_sign == 1 else '+y'
             x = prevPos[0]
 
             # Coast at end --------------------------------------------------------
@@ -471,30 +478,32 @@ def addPass(i, r, c, prevPos, addCoast):
             # then we add the coast at end point before adding the coordinate
             if addCoast and needCoast and r == nb_rows - 1:
                 coastY = start_y + totDimY - coast_at_end
-                if y > coastY:
+                if direction_sign * (y - coastY) > 0:
                     needCoast = False
-                    coastCoord = [x, coastY] + prevPos[2:6] + \
-                        [print_direction] + ['coast']
+                    # Détermine la vraie direction du coast :
+                    coast_dir = '+y' if direction_sign == 1 else '-y'
+                    coastCoord = [x, coastY] + prevPos[2:6] + [coast_dir] + ['coast']
                     coords.append(coastCoord)
 
         # Even layers 2,4,6,... (i = 1, 3, 5, ...) --------------------------------
         else:
             if r % 2 == 0:
-                x = prevPos[0] - pass_step_x
-                print_direction = '-x'
+                x = prevPos[0] - pass_step_x *  direction_sign
+                print_direction = '-x' if direction_sign == 1 else '+x'
             else:
-                x = prevPos[0] + pass_step_x
-                print_direction = '+x'
+                x = prevPos[0] + pass_step_x *  direction_sign
+                print_direction = '+x' if direction_sign == 1 else '-x'
             y = prevPos[1]
 
             # For the layer end, if the next coordinate exceed the coast at end dimension,
             # then we add the coast at end point before adding the coordinate
             if addCoast and needCoast and r == nb_cols - 1:
                 coastX = start_x + coast_at_end
-                if x < coastX:
+                if direction_sign * (x - coastX) > 0:
                     needCoast = False
-                    coastCoord = [coastX, y] + prevPos[2:6] + \
-                        [print_direction] + ['coast']
+                    # Détermine la vraie direction du coast :
+                    coast_dir = '+x' if direction_sign == 1 else '-x'
+                    coastCoord = [coastX, y] + prevPos[2:6] + [coast_dir] + ['coast']
                     coords.append(coastCoord)
 
         prevPos = [x, y] + prevPos[2:6] + [print_direction] + ['pass']
@@ -535,6 +544,112 @@ def addPass(i, r, c, prevPos, addCoast):
 
     return coords
 
+def addPass(i, r, c, prevPos, addCoast):
+    coords = []
+    needCoast = True
+
+    layer_case = i % 4  # 0, 1, 2, 3
+
+    for k in range(segments_per_scaffold):
+        if layer_case == 0:
+            # Layer 0: +Y | -Y
+            if r % 2 == 0:
+                y = prevPos[1] + pass_step_y
+                print_direction = '+y'
+            else:
+                y = prevPos[1] - pass_step_y
+                print_direction = '-y'
+            x = prevPos[0]
+
+            if addCoast and needCoast and r == nb_rows - 1:
+                coastY = start_y + totDimY - coast_at_end
+                if y > coastY:
+                    needCoast = False
+                    coastCoord = [x, coastY] + prevPos[2:6] + [print_direction] + ['coast']
+                    coords.append(coastCoord)
+
+        elif layer_case == 1:
+            # Layer 1: +X | -X
+            if r % 2 == 0:
+                x = prevPos[0] - pass_step_x
+                print_direction = '+x'
+            else:
+                x = prevPos[0] + pass_step_x
+                print_direction = '-x'
+            y = prevPos[1]
+
+            if addCoast and needCoast and r == nb_cols - 1:
+                coastX = start_x + totDimX - coast_at_end
+                if x > coastX:
+                    needCoast = False
+                    coastCoord = [coastX, y] + prevPos[2:6] + [print_direction] + ['coast']
+                    coords.append(coastCoord)
+
+        elif layer_case == 2:
+            # Layer 2: -Y | +Y
+            if r % 2 == 0:
+                y = prevPos[1] - pass_step_y
+                print_direction = '-y'
+            else:
+                y = prevPos[1] + pass_step_y
+                print_direction = '+y'
+            x = prevPos[0]
+
+            if addCoast and needCoast and r == nb_rows - 1:
+                coastY = start_y + coast_at_end
+                if y < coastY:
+                    needCoast = False
+                    coastCoord = [x, coastY] + prevPos[2:6] + [print_direction] + ['coast']
+                    coords.append(coastCoord)
+
+        else:
+            # Layer 3: -X | +X
+            if r % 2 == 0:
+                x = prevPos[0] + pass_step_x
+                print_direction = '-x'
+            else:
+                x = prevPos[0] - pass_step_x
+                print_direction = '+x'
+            y = prevPos[1]
+
+            if addCoast and needCoast and r == nb_cols - 1:
+                coastX = start_x + coast_at_end
+                if x < coastX:
+                    needCoast = False
+                    coastCoord = [coastX, y] + prevPos[2:6] + [print_direction] + ['coast']
+                    coords.append(coastCoord)
+
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + ['pass']
+        if i == 1:
+            prevPos[7] += ',refPos'
+        coords.append(prevPos)
+
+    # Perpendicular offset for wall creation (unchanged)
+    if wall_distance > 0 and c != (nb_cols if i % 2 == 0 else nb_rows) - 1:
+        cos_d = np.cos(np.radians(theta)) * wall_distance
+        sin_d = np.sin(np.radians(theta)) * wall_distance
+
+        if c % 2 == 0:
+            if i % 2 == 0:
+                x = prevPos[0] - cos_d
+                y = prevPos[1] - sin_d
+            else:
+                x = prevPos[0] - sin_d
+                y = prevPos[1] + cos_d
+        else:
+            if i % 2 == 0:
+                x = prevPos[0] + cos_d
+                y = prevPos[1] + sin_d
+            else:
+                x = prevPos[0] + sin_d
+                y = prevPos[1] - cos_d
+
+        prevPos = [x, y] + prevPos[2:7] + ['wall']
+        coords.append(prevPos)
+
+    return coords
+
+
 # Function addConnection
 #
 #   Description: calculates a connection coordinate between rows of the network.
@@ -550,139 +665,543 @@ def addPass(i, r, c, prevPos, addCoast):
 
 
 def addConnection(i, r, prevPos):
+    
+    
     coords = []
-
-    # Always add a bleeding after all the pass
-    if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
-        firstBleed = layer_change_bleed
-        special = ''
-        if stopAndGo:
-            special += ',coast pause'
-        if layer_change_bleed_clearance > 0:
-            # pecial = 'None'
-            special += ',clearColNP'
-    else:  # if last pass of a printing pass (not the last of the layer)
-        firstBleed = printing_bleed
-        # special = ''
-        special = 'lastPass'
-        if i == 1:
-            special += ',refPos'
-    if i % 2 == 0:
-        if r % 2 == 0:
-            y = prevPos[1] + firstBleed
-            print_direction = '+y'
-        else:
-            y = prevPos[1] - firstBleed
-            print_direction = '-y'
-        x = prevPos[0]
-    else:
-        if r % 2 == 0:
-            x = prevPos[0] - firstBleed
-            print_direction = '-x'
-        else:
-            x = prevPos[0] + firstBleed
-            print_direction = '+x'
-        y = prevPos[1]
-
-    prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
-    coords.append(prevPos)
-    special = ''
-
-    # Travel from on pass to the other if it's not the last pass of the layer
-    if r != (nb_rows if i % 2 == 0 else nb_cols) - 1:
-        # Create a middle point for a curve path,
-        # only if theta angle is under the threshold,
-        # otherwise, we don't need this point.
-        if theta < theta_threshold:
-            if i % 2 == 0:
-                x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
-                if r % 2 == 0:
-                    y = prevPos[1] + printing_bleed
-                    print_direction = '+y'
-                else:
-                    y = prevPos[1] - printing_bleed
-                    print_direction = '-y'
-            else:
-                if r % 2 == 0:
-                    x = prevPos[0] - printing_bleed
-                    print_direction = '-x'
-                else:
-                    x = prevPos[0] + printing_bleed
-                    print_direction = '+x'
-                y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
-
-            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
-            coords.append(prevPos)
-
-        # Create a point to switch from a pass to another
-        if i % 2 == 0:
-            # For odd layers
-            if theta < theta_threshold:
-                x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
-                if r % 2 == 0:
-                    y = prevPos[1] - printing_bleed
-                    print_direction = '-y'
-                else:
-                    y = prevPos[1] + printing_bleed
-                    print_direction = '+y'
-            else:
-                x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
-                if r % 2 == 0:
-                    print_direction = '-y'
-                else:
-                    print_direction = '+y'
-        else:
-            # For even layers
-            if theta < theta_threshold:
-                y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
-                if r % 2 == 0:
-                    x = prevPos[0] + printing_bleed
-                    print_direction = '+x'
-                else:
-                    x = prevPos[0] - printing_bleed
-                    print_direction = '-x'
-            else:
-                y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
-                if r % 2 == 0:
-                    print_direction = '+x'
-                else:
-                    print_direction = '-x'
-
-        special = 'refPos' if i < 1 else ''
-        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
-        coords.append(prevPos)
-        special = ''
-
-        # Create a new Start point after the first bleeding traveling from one pass to another
+    # Set transition direction for 184 GMN config
+    layer_case = i % 4  # 0, 1, 2, 3
+    
+    if layer_case == 0:
+        # Always add a bleeding after all the pass
+        if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
+            firstBleed =  layer_change_bleed
+            special = ''
+            if stopAndGo:
+                special += ',coast pause'
+            if layer_change_bleed_clearance > 0:
+                # pecial = 'None'
+                special += ',clearColNP'
+        else:  # if last pass of a printing pass (not the last of the layer)
+            firstBleed =  printing_bleed
+            # special = ''
+            special = 'lastPass'
+            if i == 1:
+                special += ',refPos'
         if i % 2 == 0:
             if r % 2 == 0:
-                y = prevPos[1] - printing_bleed
-                print_direction = '-y'
-            else:
-                y = prevPos[1] + printing_bleed
+                y = prevPos[1] + firstBleed
                 print_direction = '+y'
+            else:
+                y = prevPos[1] - firstBleed
+                print_direction = '-y'
             x = prevPos[0]
         else:
             if r % 2 == 0:
-                x = prevPos[0] + printing_bleed
-                print_direction = '+x'
-            else:
-                x = prevPos[0] - printing_bleed
+                x = prevPos[0] - firstBleed
                 print_direction = '-x'
+            else:
+                x = prevPos[0] + firstBleed
+                print_direction = '+x'
             y = prevPos[1]
-
-        special = 'refPos' if i == 1 else ''
+    
         prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
         coords.append(prevPos)
-
-    else:   # If we are at end of a layer
-        # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
-        if layer_change_clearance > 0:
-            offsetZ = prevPos[2] + layer_change_clearance
-            prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+        special = ''
+    
+        # Travel from on pass to the other if it's not the last pass of the layer
+        if r != (nb_rows if i % 2 == 0 else nb_cols) - 1:
+            # Create a middle point for a curve path,
+            # only if theta angle is under the threshold,
+            # otherwise, we don't need this point.
+            if theta < theta_threshold:
+                if i % 2 == 0:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                    else:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                else:
+                    if r % 2 == 0:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                    else:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+    
+                prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+                coords.append(prevPos)
+    
+            # Create a point to switch from a pass to another
+            if i % 2 == 0:
+                # For odd layers
+                if theta < theta_threshold:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                    else:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                else:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '-y'
+                    else:
+                        print_direction = '+y'
+            else:
+                # For even layers
+                if theta < theta_threshold:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    else:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                else:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '+x'
+                    else:
+                        print_direction = '-x'
+    
+            special = 'refPos' if i < 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
             coords.append(prevPos)
+            special = ''
+    
+            # Create a new Start point after the first bleeding traveling from one pass to another
+            if i % 2 == 0:
+                if r % 2 == 0:
+                    y = prevPos[1] - printing_bleed
+                    print_direction = '-y'
+                else:
+                    y = prevPos[1] + printing_bleed
+                    print_direction = '+y'
+                x = prevPos[0]
+            else:
+                if r % 2 == 0:
+                    x = prevPos[0] + printing_bleed
+                    print_direction = '+x'
+                else:
+                    x = prevPos[0] - printing_bleed
+                    print_direction = '-x'
+                y = prevPos[1]
+    
+            special = 'refPos' if i == 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            
+        else:   # If we are at end of a layer
+            # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+            if layer_change_clearance > 0:
+                offsetZ = prevPos[2] + layer_change_clearance
+                prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+                coords.append(prevPos)
+
+            
+    elif layer_case == 1:
+        # Always add a bleeding after all the pass
+        if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
+            firstBleed =  layer_change_bleed
+            special = ''
+            if stopAndGo:
+                special += ',coast pause'
+            if layer_change_bleed_clearance > 0:
+                # pecial = 'None'
+                special += ',clearColNP'
+        else:  # if last pass of a printing pass (not the last of the layer)
+            firstBleed =  printing_bleed
+            # special = ''
+            special = 'lastPass'
+            if i == 1:
+                special += ',refPos'
+        if i % 2 == 0:
+            if r % 2 == 0:
+                y = prevPos[1] + firstBleed
+                print_direction = '+y'
+            else:
+                y = prevPos[1] - firstBleed
+                print_direction = '-y'
+            x = prevPos[0]
+        else:
+            if r % 2 == 0:
+                x = prevPos[0] - firstBleed
+                print_direction = '-x'
+            else:
+                x = prevPos[0] + firstBleed
+                print_direction = '+x'
+            y = prevPos[1]
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # Travel from on pass to the other if it's not the last pass of the layer
+        if r != (nb_rows if i % 2 == 0 else nb_cols) - 1:
+            # Create a middle point for a curve path,
+            # only if theta angle is under the threshold,
+            # otherwise, we don't need this point.
+            if theta < theta_threshold:
+                if i % 2 == 0:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                    else:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                else:
+                    if r % 2 == 0:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                    else:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    y = prevPos[1] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+    
+                prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+                coords.append(prevPos)
+    
+            # Create a point to switch from a pass to another
+            if i % 2 == 0:
+                # For odd layers
+                if theta < theta_threshold:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                    else:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                else:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '-y'
+                    else:
+                        print_direction = '+y'
+            else:
+                # For even layers
+                if theta < theta_threshold:
+                    y = prevPos[1] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    else:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                else:
+                    y = prevPos[1] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '+x'
+                    else:
+                        print_direction = '-x'
+    
+            special = 'refPos' if i < 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            special = ''
+    
+            # Create a new Start point after the first bleeding traveling from one pass to another
+            if i % 2 == 0:
+                if r % 2 == 0:
+                    y = prevPos[1] - printing_bleed
+                    print_direction = '-y'
+                else:
+                    y = prevPos[1] + printing_bleed
+                    print_direction = '+y'
+                x = prevPos[0]
+            else:
+                if r % 2 == 0:
+                    x = prevPos[0] + printing_bleed
+                    print_direction = '+x'
+                else:
+                    x = prevPos[0] - printing_bleed
+                    print_direction = '-x'
+                y = prevPos[1]
+    
+            special = 'refPos' if i == 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            
+        else:   # If we are at end of a layer
+            # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+            if layer_change_clearance > 0:
+                offsetZ = prevPos[2] + layer_change_clearance
+                prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+                coords.append(prevPos)
+
+    
+    elif layer_case == 2:
+        # Always add a bleeding after all the pass
+        if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
+            firstBleed =  -1*layer_change_bleed
+            special = ''
+            if stopAndGo:
+                special += ',coast pause'
+            if layer_change_bleed_clearance > 0:
+                # pecial = 'None'
+                special += ',clearColNP'
+        else:  # if last pass of a printing pass (not the last of the layer)
+            firstBleed =  -1*printing_bleed
+            # special = ''
+            special = 'lastPass'
+            if i == 1:
+                special += ',refPos'
+        if i % 2 == 0:
+            if r % 2 == 0:
+                y = prevPos[1] + firstBleed
+                print_direction = '+y'
+            else:
+                y = prevPos[1] - firstBleed
+                print_direction = '-y'
+            x = prevPos[0]
+        else:
+            if r % 2 == 0:
+                x = prevPos[0] - firstBleed
+                print_direction = '-x'
+            else:
+                x = prevPos[0] + firstBleed
+                print_direction = '+x'
+            y = prevPos[1]
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # Travel from on pass to the other if it's not the last pass of the layer
+        if r != (nb_rows if i % 2 == 0 else nb_cols) - 1:
+            # Create a middle point for a curve path,
+            # only if theta angle is under the threshold,
+            # otherwise, we don't need this point.
+            if theta < theta_threshold:
+                if i % 2 == 0:
+                    x = prevPos[0] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '+y'
+                    else:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '-y'
+                else:
+                    if r % 2 == 0:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                    else:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+    
+                prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+                coords.append(prevPos)
+    
+            # Create a point to switch from a pass to another
+            if i % 2 == 0:
+                # For odd layers
+                if theta < theta_threshold:
+                    x = prevPos[0] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '-y'
+                    else:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '+y'
+                else:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '-y'
+                    else:
+                        print_direction = '+y'
+            else:
+                # For even layers
+                if theta < theta_threshold:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 == 0:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    else:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                else:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 == 0:
+                        print_direction = '+x'
+                    else:
+                        print_direction = '-x'
+    
+            special = 'refPos' if i < 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            special = ''
+    
+            # Create a new Start point after the first bleeding traveling from one pass to another
+            if i % 2 == 0:
+                if r % 2 == 0:
+                    y = prevPos[1] + printing_bleed
+                    print_direction = '-y'
+                else:
+                    y = prevPos[1] - printing_bleed
+                    print_direction = '+y'
+                x = prevPos[0]
+            else:
+                if r % 2 == 0:
+                    x = prevPos[0] + printing_bleed
+                    print_direction = '+x'
+                else:
+                    x = prevPos[0] - printing_bleed
+                    print_direction = '-x'
+                y = prevPos[1]
+    
+            special = 'refPos' if i == 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            
+        else:   # If we are at end of a layer
+            # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+            if layer_change_clearance > 0:
+                offsetZ = prevPos[2] + layer_change_clearance
+                prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+                coords.append(prevPos)
+
+    
+    elif layer_case == 3:
+        # Always add a bleeding after all the pass
+        if r == (nb_rows if i % 2 == 0 else nb_cols) - 1:  # if last pass of the layer
+            firstBleed =  layer_change_bleed
+            special = ''
+            if stopAndGo:
+                special += ',coast pause'
+            if layer_change_bleed_clearance > 0:
+                # pecial = 'None'
+                special += ',clearColNP'
+        else:  # if last pass of a printing pass (not the last of the layer)
+            firstBleed =  printing_bleed
+            # special = ''
+            special = 'lastPass'
+            if i == 1:
+                special += ',refPos'
+        if i % 2 == 0:
+            if r % 2 != 0:
+                y = prevPos[1] + firstBleed
+                print_direction = '+y'
+            else:
+                y = prevPos[1] - firstBleed
+                print_direction = '-y'
+            x = prevPos[0]
+        else:
+            if r % 2 != 0:
+                x = prevPos[0] - firstBleed
+                print_direction = '-x'
+            else:
+                x = prevPos[0] + firstBleed
+                print_direction = '+x'
+            y = prevPos[1]
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # Travel from on pass to the other if it's not the last pass of the layer
+        if r != (nb_rows if i % 2 == 0 else nb_cols) - 1:
+            # Create a middle point for a curve path,
+            # only if theta angle is under the threshold,
+            # otherwise, we don't need this point.
+            if theta < theta_threshold:
+                if i % 2 == 0:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 != 0:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                    else:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                else:
+                    if r % 2 != 0:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                    else:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+    
+                prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+                coords.append(prevPos)
+    
+            # Create a point to switch from a pass to another
+            if i % 2 == 0:
+                # For odd layers
+                if theta < theta_threshold:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 != 0:
+                        y = prevPos[1] - printing_bleed
+                        print_direction = '-y'
+                    else:
+                        y = prevPos[1] + printing_bleed
+                        print_direction = '+y'
+                else:
+                    x = prevPos[0] + (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 != 0:
+                        print_direction = '-y'
+                    else:
+                        print_direction = '+y'
+            else:
+                # For even layers
+                if theta < theta_threshold:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)/2
+                    if r % 2 != 0:
+                        x = prevPos[0] + printing_bleed
+                        print_direction = '+x'
+                    else:
+                        x = prevPos[0] - printing_bleed
+                        print_direction = '-x'
+                else:
+                    y = prevPos[1] - (MULTINOZZLE_WIDTH + NOZZLE_DISTANCE)
+                    if r % 2 != 0:
+                        print_direction = '+x'
+                    else:
+                        print_direction = '-x'
+    
+            special = 'refPos' if i < 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            special = ''
+    
+            # Create a new Start point after the first bleeding traveling from one pass to another
+            if i % 2 == 0:
+                if r % 2 != 0:
+                    y = prevPos[1] - printing_bleed
+                    print_direction = '-y'
+                else:
+                    y = prevPos[1] + printing_bleed
+                    print_direction = '+y'
+                x = prevPos[0]
+            else:
+                if r % 2 != 0:
+                    x = prevPos[0] + printing_bleed
+                    print_direction = '+x'
+                else:
+                    x = prevPos[0] - printing_bleed
+                    print_direction = '-x'
+                y = prevPos[1]
+    
+            special = 'refPos' if i == 1 else ''
+            prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+            coords.append(prevPos)
+            
+        else:   # If we are at end of a layer
+            # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+            if layer_change_clearance > 0:
+                offsetZ = prevPos[2] + layer_change_clearance
+                prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+                coords.append(prevPos)
+
 
     return coords
+
+
 
 # Function changeOrientation
 #
@@ -699,7 +1218,14 @@ def addConnection(i, r, prevPos):
 
 def changeOrientation(i, prevPos):
     global prevRefPos
+
     coords = []
+    # Set transition direction for 184 GMN config
+    layer_case = i % 4  # 0, 1, 2, 3
+    cycle_idx = i % 4 if is_even else 0
+
+
+    
 
     # +Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
     # IMPORTANT : here, we calculate the new Z offset but we don't add it to the coordinates collection coords,
@@ -708,65 +1234,241 @@ def changeOrientation(i, prevPos):
         offsetZ = prevPos[2] + layer_change_clearance
         prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:]
         # coords.append(prevPos)
-
-    # Backing up to get in position for next layer's pass
-    if i % 2 == 0:
-        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE) + (prev_process['nozzle_distance'] -
+        
+    if layer_case == 0:
+        
+        # Backing up to get in position for next layer's pass
+        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE) + ( -
                                                                                            curr_process['nozzle_distance']) + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
         y = prevPos[1] - (layer_change_bleed + MULTINOZZLE_WIDTH / 2) + (curr_process['multinozzle_width']/2 -
                                                                          prev_process['multinozzle_width']/2)  # + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
+
         print_direction = '+y'
-    else:
-        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2)
-        y = prevPos[1] - (layer_change_bleed +
-                          MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE)
-        print_direction = '-x'
-
-    # prevRefPos always resets at layer change
-    if not proj_file == 'None':
-        prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
-
-    # Special target attribut selection
-    if i <= 2:
-        special = 'refPos'
-    else:
-        special = ''
-    # if stopAndGo:
-    #     special += ',coast pause'
-    # else:
-    #     special += ',clearColNP'
-
-    prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
-    coords.append(prevPos)
-    special = ''
-
-    # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
-    if layer_change_clearance > 0:
-        offsetZ = prevPos[2] - layer_change_clearance
-        prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+            
+    
+    
+        # prevRefPos always resets at layer change
+        if not proj_file == 'None':
+            prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+    
+        # Special target attribut selection
+        if i <= 2:
+            special = 'refPos'
+        else:
+            special = ''
+        # if stopAndGo:
+        #     special += ',coast pause'
+        # else:
+        #     special += ',clearColNP'
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
         coords.append(prevPos)
-
-    # Adding a new point for the bleeding / start of new layer
-    # New layer is odd : 1,3,5,... (i = 0, 2, 4, ...) ----------------------------------
-    if i % 2 == 0:
+        special = ''
+    
+        # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+        if layer_change_clearance > 0:
+            offsetZ = prevPos[2] - layer_change_clearance
+            prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+            coords.append(prevPos)
+    
+            # --- Adding a new point for the bleeding / start of new layer ---
+        # For odd layers (i=0,2,4...), normally shift in +y direction
+        # For even layers (i=1,3,5...), normally shift in -x direction
+    
+            # Odd layers
+            
+            # Default behavior: shift in +y
         y = prevPos[1] + layer_change_bleed
         print_direction = '+y'
-    # New layer is even : 2,4,6,... (i = 1, 3, 5, ...) --------------------------------
-    else:
+        x = prevPos[0]
+    
+        if i == 1:
+            special = 'refPos'
+        #     special = 'refPos'
+        #     prevRefPos = {'pos':None, 'offset':0.0}
+        else:
+            special = ''
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+        
+    elif layer_case == 1:
+        
+        # Backing up to get in position for next layer's pass
+        x = prevPos[0] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2)
+        y = prevPos[1] +  (layer_change_bleed +
+                          MULTINOZZLE_WIDTH / 2 )
+        print_direction = '-x'
+    
+    
+        # prevRefPos always resets at layer change
+        if not proj_file == 'None':
+            prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+    
+        # Special target attribut selection
+        if i <= 2:
+            special = 'refPos'
+        else:
+            special = ''
+        # if stopAndGo:
+        #     special += ',coast pause'
+        # else:
+        #     special += ',clearColNP'
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+        if layer_change_clearance > 0:
+            offsetZ = prevPos[2] - layer_change_clearance
+            prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+            coords.append(prevPos)
+    
+            # --- Adding a new point for the bleeding / start of new layer ---
+        # For odd layers (i=0,2,4...), normally shift in +y direction
+        # For even layers (i=1,3,5...), normally shift in -x direction
+    
+
+        # Default behavior: shift in -x
         x = prevPos[0] - layer_change_bleed
         print_direction = '-x'
-
-    if i == 1:
-        special = 'refPos'
-    #     special = 'refPos'
-    #     prevRefPos = {'pos':None, 'offset':0.0}
-    else:
+        y = prevPos[1]
+    
+        if i == 1:
+            special = 'refPos'
+        #     special = 'refPos'
+        #     prevRefPos = {'pos':None, 'offset':0.0}
+        else:
+            special = ''
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
         special = ''
-    prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
-    coords.append(prevPos)
-    special = ''
+        
+    elif layer_case == 2:
+        
+        # Backing up to get in position for next layer's pass
+        x = prevPos[0] - ((layer_change_bleed + MULTINOZZLE_WIDTH / 2 + NOZZLE_DISTANCE)  + ( -  curr_process['nozzle_distance']) + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed']))
+        y = prevPos[1] + (layer_change_bleed + MULTINOZZLE_WIDTH / 2) + (curr_process['multinozzle_width']/2 -
+                                                                         prev_process['multinozzle_width']/2)  # + (prev_process['layer_change_bleed'] - curr_process['layer_change_bleed'])
+
+        print_direction = '+y'
+            
+
+    
+    
+        # prevRefPos always resets at layer change
+        if not proj_file == 'None':
+            prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+    
+        # Special target attribut selection
+        if i <= 2:
+            special = 'refPos'
+        else:
+            special = ''
+        # if stopAndGo:
+        #     special += ',coast pause'
+        # else:
+        #     special += ',clearColNP'
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+        if layer_change_clearance > 0:
+            offsetZ = prevPos[2] - layer_change_clearance
+            prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+            coords.append(prevPos)
+    
+            # --- Adding a new point for the bleeding / start of new layer ---
+        # For odd layers (i=0,2,4...), normally shift in +y direction
+        # For even layers (i=1,3,5...), normally shift in -x direction
+    
+
+        # Odd layers
+        
+            # Default behavior: shift in +y
+        y = prevPos[1] - layer_change_bleed
+        print_direction = '+y'
+        x = prevPos[0]
+
+    
+        if i == 1:
+            special = 'refPos'
+        #     special = 'refPos'
+        #     prevRefPos = {'pos':None, 'offset':0.0}
+        else:
+            special = ''
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+        
+    elif layer_case == 3:
+        
+        # Backing up to get in position for next layer's pass
+        x = prevPos[0] - (layer_change_bleed + MULTINOZZLE_WIDTH / 2)
+        y = prevPos[1] - (layer_change_bleed +
+                          MULTINOZZLE_WIDTH / 2 )
+        print_direction = '-x'
+
+    
+        # prevRefPos always resets at layer change
+        if not proj_file == 'None':
+            prevRefPos = {'pos': None, 'offset': np.array([0, 0, 0])}
+    
+        # Special target attribut selection
+        if i <= 2:
+            special = 'refPos'
+        else:
+            special = ''
+        # if stopAndGo:
+        #     special += ',coast pause'
+        # else:
+        #     special += ',clearColNP'
+    
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
+    
+        # -Z offset to clear the non-planar surface when rotating the printhead (if curving the network)
+        if layer_change_clearance > 0:
+            offsetZ = prevPos[2] - layer_change_clearance
+            prevPos = prevPos[0:2] + [offsetZ] + prevPos[3:-1] + [special]
+            coords.append(prevPos)
+    
+            # --- Adding a new point for the bleeding / start of new layer ---
+        # For odd layers (i=0,2,4...), normally shift in +y direction
+        # For even layers (i=1,3,5...), normally shift in -x direction
+    
+        if i % 2 == 0:
+            # Odd layers
+            
+                # Default behavior: shift in +y
+            y = prevPos[1] + layer_change_bleed
+            print_direction = '+y'
+            x = prevPos[0]
+        else:
+            
+            # Default behavior: shift in -x
+            x = prevPos[0] + layer_change_bleed
+            print_direction = '-x'
+            y = prevPos[1]
+    
+        if i == 1:
+            special = 'refPos'
+        #     special = 'refPos'
+        #     prevRefPos = {'pos':None, 'offset':0.0}
+        else:
+            special = ''
+        prevPos = [x, y] + prevPos[2:6] + [print_direction] + [special]
+        coords.append(prevPos)
+        special = ''
 
     return coords
+
+
+
 
 # Function targetAndMove
 #
@@ -2094,6 +2796,7 @@ fields = [
     'Wall distances (mm)',
     'Nominal pore sizes (mm)',
     'Thicknesses (mm)',
+    'Densify microscaffold',
     'Projection surface',
     'Compensate toolpath deformation',
     'Adjust non-planar origin',
@@ -2154,7 +2857,8 @@ column2 = [start_x,
            segments_per_scaffold,
            wall_distance_nominal,
            pore_size_nominal,
-           thickness_nominal]
+           thickness_nominal,
+           compact_path]
 
 # Column 3 : Other options
 column3 = [files,
@@ -2321,6 +3025,7 @@ if myWindow.values:
      wall_distance_nominal,
      pore_size_nominal,
      thickness_nominal,
+     compact_path,
      proj_file,
      compensateDeformation,
      adjustOrigin,
@@ -2353,6 +3058,7 @@ if myWindow.values:
     start_x = float(start_x)
     start_y = float(start_y)
     start_z = float(start_z)
+    
     # layer_change_bleed = float(layer_change_bleed)
     layer_change_clearance = float(layer_change_clearance)
     # printing_bleed = float(printing_bleed)
@@ -2575,6 +3281,13 @@ if myWindow.values:
     #       the nozzle distance (offset separation scaffolds),
     #       2× half of a nozzle diameter (from both sides of the print)
     #       and the wall distances between scaffolds
+    
+     # Duplicate rows and columns if config is 184 GMN
+    if MLTNZL_CONFIG['name'] == "184 GMN":
+        nb_rows *= 2
+        nb_cols *= 2   
+        
+    is_even = (nb_rows % 2 == 0) or (nb_cols % 2 == 0)
 
     init_rows = nb_rows
     init_cols = nb_cols
@@ -2590,6 +3303,8 @@ if myWindow.values:
         start_y = 0
     start_x -= xOffset
     start_y -= yOffset
+    
+
 
     # Coast at end parameter for layer change
     coast_at_end = scaff_speed * pressure_retract_time/1000

@@ -126,6 +126,7 @@ Version		    Notes
                 
 5.7 
 2025-02-14      Added 2 new Multinozzle configurations
+                750 GMN, 184 GMN, Mono
 
 -------------------------------------------------------------------------------------------------------------------------
 """
@@ -166,8 +167,9 @@ MLTNZL_CONFIG_MEK_SN123 = {'name': 'MEK SN 01-03',
                            'nb': 26, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_750_GMN = {'name': '750 GMN', 'nb': 36, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.434}
+MLTNZL_CONFIG_Mono = {'name': 'Mono', 'nb': 1, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123,
-                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN]
+                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN, MLTNZL_CONFIG_Mono]
 MLTNZL_CONFIG_LIST = [i['name'] for i in MLTNZL_CONFIGS]
 MLTNZL_CONFIG_LIST.append(0)
 MLTNZL_CONFIG = ''
@@ -278,7 +280,7 @@ plotType = ['2D', '3D', 1]                  # Specify is plot is 2D or 3D
 # Show data label on plots for debugging
 show_labels = [True, False, 0]
 # Debug mode : send toolpath to RoboDK if set to False
-debug = [True, False, 1]
+debug = [True, False, 0]
 # Export stats : create or not the info file containing the print stats and parameters
 export_stats = [True, False, 0]
 # Set to False to save computation time, but will not check collision of nozzles with the surface
@@ -534,6 +536,77 @@ def addPass(i, r, c, prevPos, addCoast):
         coords.append(prevPos)
 
     return coords
+
+# ========================================================================================
+# Function addPass184GMN
+#
+#   Description:
+#       Custom path generator for the "184 GMN" multinozzle configuration.
+#       This scaffold requires two interleaved passes to achieve the target pore size.
+#       Each line is printed twice: the second pass is offset perpendicular to the motion.
+#
+#   Returns:
+#       coords : list of [x, y, z, a, b, c, print_direction, 'pass' or 'coast'] entries
+#
+#   Parameters:
+#       i        : int, layer index
+#       prevPos  : list, last recorded position [x, y, z, a, b, c, ...]
+#       addCoast : bool, whether to add a coast segment at the end of each line
+#
+# ========================================================================================
+def addPass184GMN(i, prevPos, addCoast):
+    coords = []
+
+    # Layer parity determines raster direction:
+    # Even layers: X rastering (shift in Y)
+    # Odd layers : Y rastering (shift in X)
+    raster_in_x = (i % 2 == 0)
+
+    # Global parameters (defined elsewhere in script)
+    rows_per_pass = nb_rows // 2
+    cols = nb_cols
+    nozzle_spacing = NOZZLE_DISTANCE
+    interpass_shift = nozzle_spacing / 2
+    pass_step = MULTINOZZLE_WIDTH + NOZZLE_DISTANCE
+
+    z = prevPos[2]
+    a, b, c = prevPos[3:6]
+
+    for shift_pass in range(2):  # Two interlaced passes
+        for r in range(rows_per_pass):
+            # Shift direction is perpendicular to rastering
+            shift = interpass_shift if shift_pass == 1 else 0
+
+            for col in range(cols):
+                if raster_in_x:
+                    # X rastering: serpentine along X, shift in Y
+                    x = col * nozzle_spacing if r % 2 == 0 else (cols - 1 - col) * nozzle_spacing
+                    y = prevPos[1] + r * pass_step + shift
+                    print_direction = '+x' if r % 2 == 0 else '-x'
+                else:
+                    # Y rastering: serpentine along Y, shift in X
+                    y = col * nozzle_spacing if r % 2 == 0 else (cols - 1 - col) * nozzle_spacing
+                    x = prevPos[0] + r * pass_step + shift
+                    print_direction = '+y' if r % 2 == 0 else '-y'
+
+                coord = [x, y, z, a, b, c, print_direction, 'pass']
+                coords.append(coord)
+
+            # Add coast segment after last column if requested
+            if addCoast:
+                if raster_in_x:
+                    coast_x = (cols * nozzle_spacing) if r % 2 == 0 else -nozzle_spacing
+                    coast_y = y
+                    coast = [coast_x, coast_y, z, a, b, c, print_direction, 'coast']
+                else:
+                    coast_y = (cols * nozzle_spacing) if r % 2 == 0 else -nozzle_spacing
+                    coast_x = x
+                    coast = [coast_x, coast_y, z, a, b, c, print_direction, 'coast']
+
+                coords.append(coast)
+
+    return coords
+
 
 # Function addConnection
 #
@@ -2391,9 +2464,9 @@ if myWindow.values:
 # Program execution if the input window is not canceled  --------------------------------------
 if myWindow.values:
     # Check if either row or col is an even value
-    if nb_rows % 2 == 0 or nb_cols % 2 == 0:
-        raise Exception(
-            'Toolpath error : the number of rows and columns must be and odd number.\n')
+    if (nb_rows % 2 == 0 or nb_cols % 2 == 0) and MLTNZL_CONFIG['name'] != "184 GMN":
+        raise Exception('Toolpath error: the number of rows and columns must be an odd number.\n')
+
 
     # Auto-adjust wall_distance list to pore_size_nominal list
     if len(wall_distance_nominal) == 1 and wall_distance_nominal[0] == 0:
@@ -2844,56 +2917,65 @@ if myWindow.values:
         # --------------------------
         # To always have the same grid of c x r, we permute this loop max value when the layer changes
         # tqdm(range(nb_rows if i % 2 == 0 else nb_cols),'rows generated'):
-        for r in range(nb_rows if i % 2 == 0 else nb_cols):
-            # Loop on c is used to create passes according to the columns and rows of scaffolds of nb_cols X nb_rows needed
-            # --------------------------
-            # To always have the same grid of c x r, we permute this loop max value when the layer changes
-
-            # Adding coast at end by default
-            addCoast = stopAndGo
-            for c in range(nb_cols if i % 2 == 0 else nb_rows):
-                # Pass for scaffold
-                newPass = addPass(i - layer_index_offset,
-                                  r, c, prevPos, addCoast)
-
-                # Add points to the toolpath for non-planar
-                # if we need walls (while planar), otherwise we add points when curving (walls or not)
-                if not proj_file == 'None' or wall_distance > 0:
-                    for j in range(len(newPass)):
-                        if newPass[j][-1] == 'coast':
-                            addCoast = False
-                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
-                            c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
-
-                # Add points to the toolpath in planar mode
-                if proj_file == 'None':
-                    # if we need to add a coast in planar mode
-                    if addCoast:
+            
+        if MLTNZL_CONFIG['name'] == '184 GMN':
+            # Special toolpath for 184 GMN – called once per layer
+            newPass = addPass184GMN(i - layer_index_offset, prevPos, stopAndGo)
+            for j, pt in enumerate(newPass):
+                targetAndMove('L'+str(i - layer_index_offset + 1)+'R1C1P'+str(j+1), pt, i - layer_index_offset, debug)
+                if pt[-1] == 'pass':
+                    prevPos = pt
+        else:
+            for r in range(nb_rows if i % 2 == 0 else nb_cols):
+                # Loop on c is used to create passes according to the columns and rows of scaffolds of nb_cols X nb_rows needed
+                # --------------------------
+                # To always have the same grid of c x r, we permute this loop max value when the layer changes
+    
+                # Adding coast at end by default
+                addCoast = stopAndGo
+                for c in range(nb_cols if i % 2 == 0 else nb_rows):
+                    # Pass for scaffold
+                    newPass = addPass(i - layer_index_offset,
+                                      r, c, prevPos, addCoast)
+    
+                    # Add points to the toolpath for non-planar
+                    # if we need walls (while planar), otherwise we add points when curving (walls or not)
+                    if not proj_file == 'None' or wall_distance > 0:
                         for j in range(len(newPass)):
                             if newPass[j][-1] == 'coast':
                                 addCoast = False
-                                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
-                                    c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
-
-                    # if there is a layer change bleed clearance, we need to add the last point of the last pass
-                    if layer_change_bleed_clearance > 0 and (r == (nb_rows-1 if i % 2 == 0 else nb_cols-1)) and (c == (nb_cols-1 if i % 2 == 0 else nb_rows-1)):
-                        targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
-                            c+1)+'P'+str(1), newPass[-1], i - layer_index_offset, debug)
-
-                prevPos = newPass[-1]
-            # --------------------------
-            # EndLoop "for c" (cols)
-
-            newConnection = addConnection(i - layer_index_offset, r, prevPos)
-            # Remove the last point to the newConnection if we don't need walls, otherwise we add a useless point
-            nbPointsToAdd = len(newConnection)
-            if proj_file == 'None' and wall_distance == 0 and len(newConnection) > 2:
-                nbPointsToAdd = len(newConnection)-1
-
-            for j in range(nbPointsToAdd):
-                targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
-                    c+1)+'CON'+str(j+1), newConnection[j], i - layer_index_offset, debug)
-            prevPos = newConnection[-1]
+                            targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                                c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
+    
+                    # Add points to the toolpath in planar mode
+                    if proj_file == 'None':
+                        # if we need to add a coast in planar mode
+                        if addCoast:
+                            for j in range(len(newPass)):
+                                if newPass[j][-1] == 'coast':
+                                    addCoast = False
+                                    targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                                        c+1)+'P'+str(j+1), newPass[j], i - layer_index_offset, debug)
+    
+                        # if there is a layer change bleed clearance, we need to add the last point of the last pass
+                        if layer_change_bleed_clearance > 0 and (r == (nb_rows-1 if i % 2 == 0 else nb_cols-1)) and (c == (nb_cols-1 if i % 2 == 0 else nb_rows-1)):
+                            targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                                c+1)+'P'+str(1), newPass[-1], i - layer_index_offset, debug)
+    
+                    prevPos = newPass[-1]
+                # --------------------------
+                # EndLoop "for c" (cols)
+    
+                newConnection = addConnection(i - layer_index_offset, r, prevPos)
+                # Remove the last point to the newConnection if we don't need walls, otherwise we add a useless point
+                nbPointsToAdd = len(newConnection)
+                if proj_file == 'None' and wall_distance == 0 and len(newConnection) > 2:
+                    nbPointsToAdd = len(newConnection)-1
+    
+                for j in range(nbPointsToAdd):
+                    targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
+                        c+1)+'CON'+str(j+1), newConnection[j], i - layer_index_offset, debug)
+                prevPos = newConnection[-1]
         # --------------------------
         # EndLoop "for r" (rows)
     # --------------------------

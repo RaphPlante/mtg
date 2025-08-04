@@ -126,6 +126,7 @@ Version		    Notes
                 
 5.7 
 2025-02-14      Added 2 new Multinozzle configurations
+                750 GMN, 184 GMN, Mono
 
 -------------------------------------------------------------------------------------------------------------------------
 """
@@ -165,9 +166,10 @@ FANUC_TRAVEL_CLEARANCE = 100
 MLTNZL_CONFIG_MEK_SN123 = {'name': 'MEK SN 01-03',
                            'nb': 26, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIG_750_GMN = {'name': '750 GMN', 'nb': 36, 'd': 0.250, 's': 1.000}
-MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.434}
+MLTNZL_CONFIG_184_GMN = {'name': '184 GMN', 'nb': 36, 'd': 0.250, 's': 0.618} #final s: 0.434
+MLTNZL_CONFIG_Mono = {'name': 'Mono', 'nb': 1, 'd': 0.250, 's': 1.000}
 MLTNZL_CONFIGS = [MLTNZL_CONFIG_MEK_SN123,
-                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN]
+                  MLTNZL_CONFIG_750_GMN, MLTNZL_CONFIG_184_GMN, MLTNZL_CONFIG_Mono]
 MLTNZL_CONFIG_LIST = [i['name'] for i in MLTNZL_CONFIGS]
 MLTNZL_CONFIG_LIST.append(0)
 MLTNZL_CONFIG = ''
@@ -278,7 +280,7 @@ plotType = ['2D', '3D', 1]                  # Specify is plot is 2D or 3D
 # Show data label on plots for debugging
 show_labels = [True, False, 0]
 # Debug mode : send toolpath to RoboDK if set to False
-debug = [True, False, 1]
+debug = [True, False, 0]
 # Export stats : create or not the info file containing the print stats and parameters
 export_stats = [True, False, 0]
 # Set to False to save computation time, but will not check collision of nozzles with the surface
@@ -534,6 +536,62 @@ def addPass(i, r, c, prevPos, addCoast):
         coords.append(prevPos)
 
     return coords
+
+# ========================================================================================
+# Function addPass184GMN
+#
+#   Description:
+#       Custom path generator for the "184 GMN" multinozzle configuration.
+#       This scaffold requires two interleaved passes to achieve the target pore size.
+#       Each line is printed twice: the second pass is offset perpendicular to the motion.
+#
+#   Returns:
+#       coords : list of [x, y, z, a, b, c, print_direction, 'pass' or 'coast'] entries
+#
+#   Parameters:
+#       i        : int, layer index
+#       prevPos  : list, last recorded position [x, y, z, a, b, c, ...]
+#       addCoast : bool, whether to add a coast segment at the end of each line
+#
+# ========================================================================================
+def addShiftedPass_fromBase(base_pass):
+    """
+    Create a shifted copy of a scaffold pass for the 184 GMN configuration.
+    The shift is applied perpendicularly to the pass direction, by (NOZZLE_DISTANCE - NOZZLE_DIAMETER).
+    The original pass is preserved; only coordinates are adjusted.
+    
+    Parameters:
+        base_pass : list of points [x, y, z, a, b, c, print_direction, tag]
+    
+    Returns:
+        shifted_pass : list of shifted points with same orientation and tags
+    """
+    if len(base_pass) < 2:
+        return base_pass.copy()
+
+    # Compute average direction vector over the pass
+    dx = base_pass[-1][0] - base_pass[0][0]
+    dy = base_pass[-1][1] - base_pass[0][1]
+    mag = (dx ** 2 + dy ** 2) ** 0.5
+    if mag == 0:
+        return base_pass.copy()
+
+    # Unit vector perpendicular to movement (rotate 90° CCW)
+    ux, uy = dx / mag, dy / mag
+    shift_x = -(NOZZLE_DISTANCE - NOZZLE_DIAMETER) * uy
+    shift_y =  (NOZZLE_DISTANCE - NOZZLE_DIAMETER) * ux
+
+    shifted_pass = []
+    for pt in base_pass:
+        pt_new = pt.copy()
+        pt_new[0] += shift_x
+        pt_new[1] += shift_y
+        shifted_pass.append(pt_new)
+
+    return shifted_pass
+
+
+
 
 # Function addConnection
 #
@@ -2391,9 +2449,9 @@ if myWindow.values:
 # Program execution if the input window is not canceled  --------------------------------------
 if myWindow.values:
     # Check if either row or col is an even value
-    if nb_rows % 2 == 0 or nb_cols % 2 == 0:
-        raise Exception(
-            'Toolpath error : the number of rows and columns must be and odd number.\n')
+    if (nb_rows % 2 == 0 or nb_cols % 2 == 0) and MLTNZL_CONFIG['name'] != "184 GMN":
+        raise Exception('Toolpath error: the number of rows and columns must be an odd number.\n')
+
 
     # Auto-adjust wall_distance list to pore_size_nominal list
     if len(wall_distance_nominal) == 1 and wall_distance_nominal[0] == 0:
@@ -2844,6 +2902,8 @@ if myWindow.values:
         # --------------------------
         # To always have the same grid of c x r, we permute this loop max value when the layer changes
         # tqdm(range(nb_rows if i % 2 == 0 else nb_cols),'rows generated'):
+            
+
         for r in range(nb_rows if i % 2 == 0 else nb_cols):
             # Loop on c is used to create passes according to the columns and rows of scaffolds of nb_cols X nb_rows needed
             # --------------------------
@@ -2853,8 +2913,31 @@ if myWindow.values:
             addCoast = stopAndGo
             for c in range(nb_cols if i % 2 == 0 else nb_rows):
                 # Pass for scaffold
-                newPass = addPass(i - layer_index_offset,
-                                  r, c, prevPos, addCoast)
+                if MLTNZL_CONFIG['name'] == '184 GMN':
+                    # === 1. Première passe classique
+                    pass_main = addPass(i - layer_index_offset, r, c, prevPos, addCoast)
+                    for j, pt in enumerate(pass_main):
+                        if pt[-1] == 'coast':
+                            addCoast = False
+                        targetAndMove(f'L{i - layer_index_offset + 1}R{r+1}C{c+1}P{j+1}', pt, i - layer_index_offset, debug)
+                    prevPos = pass_main[-1]
+                
+                    # === 2. Ajoute un "V" (conn) pour permettre le repositionnement
+                    conn_shift = addConnection(i - layer_index_offset, r, prevPos)
+                    for j, pt in enumerate(conn_shift):
+                        targetAndMove(f'L{i - layer_index_offset + 1}R{r+1}C{c+1}S-CON{j+1}', pt, i - layer_index_offset, debug)
+                    prevPos = conn_shift[-1]
+                
+                    # === 3. Passe intercalée, décalée perpendiculairement
+                    pass_shifted = addShiftedPass_fromBase(pass_main)
+                    for j, pt in enumerate(pass_shifted):
+                        if pt[-1] == 'coast':
+                            addCoast = False
+                        targetAndMove(f'L{i - layer_index_offset + 1}R{r+1}C{c+1}S-P{j+1}', pt, i - layer_index_offset, debug)
+                    prevPos = pass_shifted[-1]
+
+                else:
+                    newPass = addPass(i - layer_index_offset, r, c, prevPos, addCoast)
 
                 # Add points to the toolpath for non-planar
                 # if we need walls (while planar), otherwise we add points when curving (walls or not)
@@ -2880,7 +2963,11 @@ if myWindow.values:
                         targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
                             c+1)+'P'+str(1), newPass[-1], i - layer_index_offset, debug)
 
-                prevPos = newPass[-1]
+                if MLTNZL_CONFIG['name'] == '184 GMN':
+                    prevPos = pass_shifted[-1]  # ou conn_shift[-1] selon ton flux
+                else:
+                    prevPos = newPass[-1]
+
             # --------------------------
             # EndLoop "for c" (cols)
 
@@ -2894,10 +2981,10 @@ if myWindow.values:
                 targetAndMove('L'+str(i - layer_index_offset + 1)+'R'+str(r+1)+'C'+str(
                     c+1)+'CON'+str(j+1), newConnection[j], i - layer_index_offset, debug)
             prevPos = newConnection[-1]
-        # --------------------------
-        # EndLoop "for r" (rows)
     # --------------------------
-    # EndLoop "for i" (layers)
+    # EndLoop "for r" (rows)
+# --------------------------
+# EndLoop "for i" (layers)
 
     # Retraction -------------------------------------------------------------
     if not debug:
