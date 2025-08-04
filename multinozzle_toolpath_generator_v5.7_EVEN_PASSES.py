@@ -3097,9 +3097,9 @@ if myWindow.values:
 # Program execution if the input window is not canceled  --------------------------------------
 if myWindow.values:
     # Check if either row or col is an even value
-    if nb_rows % 2 == 0 or nb_cols % 2 == 0:
-        raise Exception(
-            'Toolpath error : the number of rows and columns must be and odd number.\n')
+    # if nb_rows % 2 == 0 or nb_cols % 2 == 0:
+    #     raise Exception(
+    #         'Toolpath error : the number of rows and columns must be and odd number.\n')
 
     # Auto-adjust wall_distance list to pore_size_nominal list
     if len(wall_distance_nominal) == 1 and wall_distance_nominal[0] == 0:
